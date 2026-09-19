@@ -31,6 +31,8 @@ def parse_args():
     args = parser.parse_args()
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repo):
         parser.error("--repo must be OWNER/REPO")
+    if args.ref.startswith("-"):
+        parser.error("--ref must be a branch, tag, or commit")
     directory = PurePosixPath(args.directory)
     if directory.is_absolute() or ".." in directory.parts:
         parser.error("--directory must stay inside the repository")
@@ -78,6 +80,7 @@ def main():
             session.agent()
         if args.command:
             session.run(args.command, timeout=600)
+            session.result["command_returncode"] = 0
         session.result["status"] = "passed"
         session.save()
         if args.hold:
@@ -85,7 +88,8 @@ def main():
             while session.sandbox.poll() is None:
                 time.sleep(2)
     except KeyboardInterrupt:
-        session.result["status"] = "stopped"
+        if session.result["status"] != "passed":
+            session.result["status"] = "stopped"
     except Exception as error:
         session.result.update(status="failed", error=str(error))
         raise

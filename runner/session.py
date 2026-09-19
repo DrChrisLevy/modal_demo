@@ -87,7 +87,8 @@ class Session:
         self.run(
             f"git clone -- https://github.com/{args.repo}.git /workspace/repo", cwd="/workspace"
         )
-        self.run(f"git checkout --detach {shlex.quote(args.ref)}", cwd="/workspace/repo")
+        self.run(f"git fetch origin {shlex.quote(args.ref)}", cwd="/workspace/repo")
+        self.run("git checkout --detach FETCH_HEAD", cwd="/workspace/repo")
         self.baseline = self.run("git rev-parse HEAD", cwd="/workspace/repo").strip()
         self.result["source_sha"] = self.baseline
         self.run(
