@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tiny Task Board</title>
+  <style>
+    :root { font-family: ui-sans-serif, system-ui, sans-serif; color: #18302b; background: #f4f5ef; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 64px 24px; }
+    main { max-width: 720px; margin: auto; }
+    .eyebrow { font: 12px ui-monospace, monospace; letter-spacing: 2px; text-transform: uppercase; }
+    h1 { font-size: clamp(36px, 7vw, 58px); letter-spacing: -2px; margin: 16px 0; }
+    .intro { color: #596d65; line-height: 1.6; margin-bottom: 32px; }
+    form { display: flex; gap: 10px; }
+    input[type=text] { flex: 1; min-width: 0; padding: 14px; border: 1px solid #c9d4c8; border-radius: 8px; font: inherit; }
+    button { padding: 12px 18px; border: 0; border-radius: 8px; background: #1c5441; color: white; font: inherit; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: wait; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #8ccca5; outline-offset: 3px; }
+    ul { list-style: none; padding: 0; margin-top: 24px; }
+    li { display: flex; gap: 14px; align-items: center; background: white; padding: 20px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #e0e6dd; }
+    li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
+    input[type=checkbox] { width: 20px; height: 20px; accent-color: #1c5441; }
+    li.done label { text-decoration: line-through; color: #819188; }
+    #empty, footer { color: #748379; font-size: 14px; margin-top: 28px; }
+    #error { color: #a03326; min-height: 1.4em; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">A small place to start</div>
+  <h1>Tiny Task Board</h1>
+  <p class="intro">Make a little progress. Add a task, check it off, come back for the next one.</p>
+  <form id="add-form">
+    <input id="title" type="text" aria-label="New task" placeholder="What needs doing?" maxlength="200" required>
+    <button type="submit">Add task</button>
+  </form>
+  <p id="error" role="alert"></p>
+  <ul id="tasks" aria-label="Tasks"></ul>
+  <p id="empty" hidden>Nothing here yet. Make room for your first task.</p>
+  <footer>Your tasks are saved when you come back.</footer>
+</main>
+<script>
+  const list = document.querySelector('#tasks');
+  const error = document.querySelector('#error');
+  async function request(path, options = {}) {
+    const response = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...options});
+    if (!response.ok) throw new Error('Something went wrong. Please try again.');
+    return response.json();
+  }
+  async function refresh() {
+    const tasks = await request('/api/tasks');
+    list.replaceChildren();
+    document.querySelector('#empty').hidden = tasks.length > 0;
+    for (const task of tasks) {
+      const row = document.createElement('li');
+      row.className = task.done ? 'done' : '';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox'; checkbox.checked = task.done; checkbox.id = `task-${task.id}`;
+      const label = document.createElement('label');
+      label.htmlFor = checkbox.id; label.textContent = task.title;
+      checkbox.addEventListener('change', async () => {
+        checkbox.disabled = true; error.textContent = '';
+        try {
+          await request(`/api/tasks/${task.id}`, {method: 'PATCH', body: JSON.stringify({done: checkbox.checked})});
+          await refresh();
+        } catch (e) { checkbox.checked = !checkbox.checked; error.textContent = e.message; }
+        finally { checkbox.disabled = false; }
+      });
+      row.append(checkbox, label); list.append(row);
+    }
+  }
+  document.querySelector('#add-form').addEventListener('submit', async event => {
+    event.preventDefault(); error.textContent = '';
+    const input = document.querySelector('#title');
+    const button = event.target.querySelector('button'); button.disabled = true;
+    try {
+      await request('/api/tasks', {method: 'POST', body: JSON.stringify({title: input.value})});
+      input.value = ''; await refresh(); input.focus();
+    } catch (e) { error.textContent = e.message; }
+    finally { button.disabled = false; }
+  });
+  refresh().catch(e => { error.textContent = e.message; });
+</script>
+</body>
+</html>

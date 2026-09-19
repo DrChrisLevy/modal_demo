@@ -1,0 +1,32 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://demo:demo@db:5432/tasks
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "uv", "run", "--frozen", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  db:
+    image: public.ecr.aws/docker/library/postgres:17.5-bookworm
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: tasks
+    volumes:
+      - data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d tasks"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  data:

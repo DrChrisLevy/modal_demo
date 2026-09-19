@@ -1,0 +1,18 @@
+[project]
+name = "modal-compose-demo"
+version = "0.1.0"
+description = "Run an existing Docker Compose project in a Modal VM Sandbox"
+requires-python = ">=3.12,<3.14"
+dependencies = ["modal==1.5.5"]
+
+[dependency-groups]
+dev = ["ruff>=0.12,<1"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
