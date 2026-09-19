@@ -40,6 +40,33 @@ def test_create_read_complete_and_reopen(api, title):
         assert updated.json() in api.get("/api/tasks").json()
 
 
+def test_task_status_filters(api, title):
+    open_task = api.post("/api/tasks", json={"title": title + "-open"}).json()
+    done_task = api.post("/api/tasks", json={"title": title + "-done"}).json()
+    api.patch(f"/api/tasks/{done_task['id']}", json={"done": True})
+
+    assert open_task in api.get("/api/tasks?status=open").json()
+    assert done_task not in api.get("/api/tasks?status=open").json()
+    assert done_task | {"done": True} in api.get("/api/tasks?status=done").json()
+    assert open_task not in api.get("/api/tasks?status=done").json()
+
+
+def test_completed_task_disappears_from_open_filter(api, title):
+    task = api.post("/api/tasks", json={"title": title}).json()
+    assert task in api.get("/api/tasks?status=open").json()
+
+    response = api.patch(f"/api/tasks/{task['id']}", json={"done": True})
+
+    assert response.status_code == 200
+    assert task["id"] not in {
+        item["id"] for item in api.get("/api/tasks?status=open").json()
+    }
+
+
+def test_reject_invalid_task_status(api):
+    assert api.get("/api/tasks?status=blocked").status_code == 422
+
+
 @pytest.mark.parametrize("invalid", ["", "   ", "x" * 201])
 def test_reject_invalid_title(api, invalid):
     assert api.post("/api/tasks", json={"title": invalid}).status_code == 422

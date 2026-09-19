@@ -17,6 +17,9 @@
     button { padding: 12px 18px; border: 0; border-radius: 8px; background: #1c5441; color: white; font: inherit; cursor: pointer; }
     button:disabled { opacity: .5; cursor: wait; }
     button:focus-visible, input:focus-visible { outline: 3px solid #8ccca5; outline-offset: 3px; }
+    #filters { display: flex; gap: 8px; margin-top: 24px; }
+    #filters button { padding: 8px 14px; background: transparent; color: #1c5441; border: 1px solid #9aaca2; }
+    #filters button[aria-pressed=true] { background: #1c5441; color: white; border-color: #1c5441; }
     ul { list-style: none; padding: 0; margin-top: 24px; }
     li { display: flex; gap: 14px; align-items: center; background: white; padding: 20px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #e0e6dd; }
     li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
@@ -36,6 +39,11 @@
     <button type="submit">Add task</button>
   </form>
   <p id="error" role="alert"></p>
+  <div id="filters" role="group" aria-label="Filter tasks">
+    <button type="button" data-status="all" aria-pressed="true">All</button>
+    <button type="button" data-status="open" aria-pressed="false">Open</button>
+    <button type="button" data-status="done" aria-pressed="false">Done</button>
+  </div>
   <ul id="tasks" aria-label="Tasks"></ul>
   <p id="empty" hidden>Nothing here yet. Make room for your first task.</p>
   <footer>Your tasks are saved when you come back.</footer>
@@ -43,15 +51,24 @@
 <script>
   const list = document.querySelector('#tasks');
   const error = document.querySelector('#error');
+  const empty = document.querySelector('#empty');
+  const filters = document.querySelector('#filters');
+  let currentFilter = 'all';
+  const emptyMessages = {
+    all: 'Nothing here yet. Make room for your first task.',
+    open: 'No open tasks. You are all caught up.',
+    done: 'No completed tasks yet.',
+  };
   async function request(path, options = {}) {
     const response = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...options});
     if (!response.ok) throw new Error('Something went wrong. Please try again.');
     return response.json();
   }
   async function refresh() {
-    const tasks = await request('/api/tasks');
+    const tasks = await request(`/api/tasks?status=${currentFilter}`);
     list.replaceChildren();
-    document.querySelector('#empty').hidden = tasks.length > 0;
+    empty.textContent = emptyMessages[currentFilter];
+    empty.hidden = tasks.length > 0;
     for (const task of tasks) {
       const row = document.createElement('li');
       row.className = task.done ? 'done' : '';
@@ -70,6 +87,17 @@
       row.append(checkbox, label); list.append(row);
     }
   }
+  filters.addEventListener('click', async event => {
+    const button = event.target.closest('button[data-status]');
+    if (!button || button.dataset.status === currentFilter) return;
+    currentFilter = button.dataset.status;
+    for (const filter of filters.querySelectorAll('button')) {
+      filter.setAttribute('aria-pressed', filter === button ? 'true' : 'false');
+    }
+    error.textContent = '';
+    try { await refresh(); }
+    catch (e) { error.textContent = e.message; }
+  });
   document.querySelector('#add-form').addEventListener('submit', async event => {
     event.preventDefault(); error.textContent = '';
     const input = document.querySelector('#title');

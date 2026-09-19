@@ -3,6 +3,7 @@
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
 import psycopg
 from fastapi import FastAPI, HTTPException
@@ -59,9 +60,15 @@ def health():
 
 
 @app.get("/api/tasks")
-def list_tasks():
+def list_tasks(status: Literal["all", "open", "done"] = "all"):
+    query = "SELECT * FROM tasks"
+    parameters = ()
+    if status != "all":
+        query += " WHERE done = %s"
+        parameters = (status == "done",)
+    query += " ORDER BY id DESC"
     with database() as connection:
-        return connection.execute("SELECT * FROM tasks ORDER BY id DESC").fetchall()
+        return connection.execute(query, parameters).fetchall()
 
 
 @app.post("/api/tasks", status_code=201)

@@ -27,5 +27,14 @@ the source mount. Dependency changes require `docker compose up --build --wait`.
 Tests call the running HTTP application and its actual database; no mocks or
 SQLite substitute. Test-created rows are removed afterward.
 
-API: `GET /health`, `GET /api/tasks`, `POST /api/tasks` with `{"title":"..."}`,
-and `PATCH /api/tasks/{id}` with `{"done":true}`. Interactive docs: `/docs`.
+The task board can show all, open, or completed tasks. The selected filter stays
+active when a task is added or completed. The API accepts the same filter on
+`GET /api/tasks` with `status=all|open|done` (default: `all`):
+
+```bash
+curl 'http://localhost:8000/api/tasks?status=open'
+```
+
+An unsupported status returns HTTP 422. Other endpoints are `GET /health`,
+`POST /api/tasks` with `{"title":"..."}`, and `PATCH /api/tasks/{id}` with
+`{"done":true}`. Interactive docs: `/docs`.
