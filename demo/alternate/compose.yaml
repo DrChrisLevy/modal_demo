@@ -1,0 +1,18 @@
+# A second, unrelated Compose project to prove that the launcher is reusable.
+services:
+  site:
+    image: public.ecr.aws/docker/library/python:3.12.11-slim-bookworm
+    working_dir: /tmp/site
+    command:
+      - sh
+      - -c
+      - |
+        printf '<h1>Another project, same runner</h1>\n' > index.html
+        exec python -m http.server 8080
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080')"]
+      interval: 2s
+      timeout: 3s
+      retries: 20

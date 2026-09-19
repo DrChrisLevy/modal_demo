@@ -97,6 +97,16 @@ resolve within the cloned repository. Project-specific secrets, host files,
 external services, privileged requirements, or special kernel configuration need
 explicit setup; this small example does not infer them.
 
+A second, unrelated Compose fixture serves a static page on **8080**, with a
+service named `site`. It exercises the same launcher with no Python app or
+database setup:
+
+```bash
+uv run --frozen python -m runner \
+  --profile drchrislevy --workspace drchrislevy \
+  --repo DrChrisLevy/modal_demo --directory demo/alternate --port 8080 --hold
+```
+
 ## What actually runs where
 
 The VM tools image contains Docker, Compose, Git, and `gh`. Agent runs add the
