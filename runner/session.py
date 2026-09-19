@@ -31,11 +31,16 @@ class Session:
             workdir=cwd or self.directory,
             timeout=timeout,
         )
-        with ThreadPoolExecutor(max_workers=2) as pool:
+        pool = ThreadPoolExecutor(max_workers=2)
+        try:
             stdout = pool.submit(process.stdout.read)
             stderr = pool.submit(process.stderr.read)
             process.wait()
             out, err = stdout.result(), stderr.result()
+        finally:
+            # On Ctrl+C, let the outer cleanup collect files and stop the VM.
+            # Waiting for pipe readers here would first wait for the remote job.
+            pool.shutdown(wait=False, cancel_futures=True)
         with (self.output / "commands.log").open("a") as log:
             log.write(f"\n$ {command}\n{out}{err}\nexit={process.returncode}\n")
         if not quiet:
