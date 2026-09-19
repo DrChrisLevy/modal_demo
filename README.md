@@ -4,6 +4,9 @@ An existing Docker Compose project runs inside a fresh **Modal VM Sandbox**.
 The app, database, and tests stay in Docker. Codex works on the checkout using
 the same development commands a person would use, then opens a draft PR.
 
+**[Verified runs and replay instructions](VERIFICATION.md)** ·
+**[Agent-created draft PR](https://github.com/DrChrisLevy/modal_demo/pull/1)**
+
 ```text
 Your laptop: uv + Modal SDK
         │ create VM, clone a repo, run commands, collect artifacts
