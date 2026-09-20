@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+
+export MODAL_SANDBOX_V2=1  # SDK 1.5.5 compatibility.
+export RUN_REPO=DrChrisLevy/modal_demo RUN_REF=main RUN_DIRECTORY=example RUN_PORT=8000
+
+tests='docker compose exec -T web uv run --frozen pytest -q && docker compose exec -T web uv run --frozen ruff check .'
+action="${1:-help}"
+target="${2:-local}"
+case "$action" in
+  list)
+    if [ "$#" -ne 1 ]; then echo 'Usage: ./run list' >&2; exit 2; fi
+    exec uv run --frozen python -m runner.remote list ;;
+  up|down|test|shell)
+    if [ "$#" -gt 3 ]; then echo 'Usage: ./run {up|down|test|shell} [remote [name]]' >&2; exit 2; fi
+    case "$target" in
+      remote)
+        export RUN_NAME="${3:-app}"
+        exec uv run --frozen python -m runner.remote "$action" "$tests" ;;
+      local)
+        if [ "$#" -gt 2 ]; then echo 'Names apply to remote environments.' >&2; exit 2; fi
+        cd "$RUN_DIRECTORY"
+        case "$action" in
+          up) docker compose up --build --wait; echo "http://localhost:$RUN_PORT" ;;
+          down) docker compose down ;;
+          test) bash -c "$tests" ;;
+          shell) exec docker compose exec web bash ;;
+        esac ;;
+      *) echo 'Target must be local or remote.' >&2; exit 2 ;;
+    esac ;;
+  agent)
+    case "$#" in
+      2)
+        export RUN_NAME="job-$(date -u +%Y%m%dT%H%M%S)-$$"
+        exec uv run --frozen python -m runner.remote job "$2" ;;
+      3)
+        export RUN_NAME="$2"
+        exec uv run --frozen python -m runner.remote agent "$3" ;;
+      *) echo 'Usage: ./run agent [name] "your task"' >&2; exit 2 ;;
+    esac ;;
+  help|--help|-h)
+    echo './run {up|down|test|shell} [remote [name]]'
+    echo './run list                # show running remote environments tracked here'
+    echo 'Shell opens the local web container or the remote VM at /workspace/repo, matching the agent.'
+    echo './run agent "task"         # fresh VM; stops when finished'
+    echo './run agent name "task"    # use an environment started with up remote name'
+    echo 'Remote names default to app. Each name has its own VM, files, database, and URL.'
+    echo 'Remote up clones the configured GitHub ref. Down exports changes and stops the VM.'
+    echo 'VMs expire after 30 minutes. Separate agent calls share files, not conversation history.' ;;
+  *) echo 'Use ./run --help' >&2; exit 2 ;;
+esac

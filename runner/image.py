@@ -4,8 +4,8 @@ import modal
 
 COMPOSE_VERSION = "v2.39.4"
 COMPOSE_SHA256 = "7af95166a730b87e172d4fc9aefea8725d3c6c7327d59149267b452114ddb7d4"
-CODEX_VERSION = "0.149.1"
-CODEX_SHA256 = "1e8531ae5f6dea3c6e11e53e74cc5ac81bf1ba597f9b296fb112d6ea30fdaf5d"
+CODEX_VERSION = "0.155.1"
+CODEX_SHA256 = "a65b895c6ac1a73629bbe4b864640c86133e94a43b4d67b3103044e1a306d5a2"
 
 # Docker runs inside the VM. No host Docker socket or laptop daemon is involved.
 BOOT = """
@@ -14,7 +14,6 @@ mkdir -p /workspace /artifacts
 dockerd --host unix:///var/run/docker.sock >/tmp/dockerd.log 2>&1 &
 for attempt in $(seq 1 120); do
     if docker info >/dev/null 2>&1; then
-        touch /tmp/docker-ready
         exec sleep infinity
     fi
     sleep 1
