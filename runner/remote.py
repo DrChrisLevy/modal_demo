@@ -192,7 +192,7 @@ def load_or_prepare_image():
             return modal.Image.from_id(cached["image_id"])
     print("Preparing Docker once for subsequent VMs...", flush=True)
     with modal.enable_output():
-        vm = VM.create(tools_image(agent=True))
+        vm = VM.create(tools_image())
     try:
         vm.checkout()
         vm.run("docker compose pull --ignore-buildable && docker compose build")

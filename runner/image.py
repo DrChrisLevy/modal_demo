@@ -23,7 +23,7 @@ exit 1
 """
 
 
-def tools_image(*, agent=False):
+def tools_image():
     plugin = "/usr/local/lib/docker/cli-plugins/docker-compose"
     image = (
         modal.Image.debian_slim(python_version="3.12")
@@ -39,13 +39,11 @@ def tools_image(*, agent=False):
         .env({"GH_PROMPT_DISABLED": "1", "COMPOSE_PARALLEL_LIMIT": "1"})
         .workdir("/workspace")
     )
-    if agent:
-        image = image.run_commands(
-            f"curl -fsSL https://github.com/openai/codex/releases/download/"
-            f"rust-v{CODEX_VERSION}/codex-package-x86_64-unknown-linux-musl.tar.gz "
-            "-o /tmp/codex.tar.gz",
-            f"echo '{CODEX_SHA256}  /tmp/codex.tar.gz' | sha256sum -c -",
-            "tar -xzf /tmp/codex.tar.gz -C /usr/local && rm /tmp/codex.tar.gz",
-            "codex --version",
-        )
-    return image
+    return image.run_commands(
+        f"curl -fsSL https://github.com/openai/codex/releases/download/"
+        f"rust-v{CODEX_VERSION}/codex-package-x86_64-unknown-linux-musl.tar.gz "
+        "-o /tmp/codex.tar.gz",
+        f"echo '{CODEX_SHA256}  /tmp/codex.tar.gz' | sha256sum -c -",
+        "tar -xzf /tmp/codex.tar.gz -C /usr/local && rm /tmp/codex.tar.gz",
+        "codex --version",
+    )
