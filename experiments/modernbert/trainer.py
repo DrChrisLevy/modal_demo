@@ -12,18 +12,12 @@ import hashlib
 import json
 import re
 import subprocess
-from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
 import modal
 
-from experiments.modernbert.data import (
-    DatasetConfig,
-    clean_training_rows,
-    load_classification_dataset,
-)
 from experiments.modernbert.evaluation import (
     classification_metrics,
     select_threshold,
@@ -33,40 +27,39 @@ from experiments.modernbert.evaluation import (
 # ---------------------------------- SETUP BEGIN ----------------------------------#
 # Add or edit datasets here; the training/evaluation code below is dataset-independent.
 DATASETS = {
-    "banking77": DatasetConfig(
-        name="csv",  # The original HF Python loading script is no longer supported.
-        data_files={
-            "train": (
-                "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/"
-                "9d081458ff52e53cf7e848f414e6e9344e4e6696/banking_data/train.csv"
-            ),
-            "test": (
-                "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/"
-                "9d081458ff52e53cf7e848f414e6e9344e4e6696/banking_data/test.csv"
-            ),
+    "banking77": {
+        "load": {
+            "path": "csv",
+            "data_files": {
+                "train": (
+                    "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/"
+                    "9d081458ff52e53cf7e848f414e6e9344e4e6696/banking_data/train.csv"
+                ),
+                "test": (
+                    "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/"
+                    "9d081458ff52e53cf7e848f414e6e9344e4e6696/banking_data/test.csv"
+                ),
+            },
         },
-        input_column="text",
-        label_column="category",
-        train_split="train",
-        validation_split=None,  # Create validation from training.
-        test_split="test",
-        id2label=None,  # Infer the sorted string categories from training only.
-    ),
-    "emotion": DatasetConfig(
-        name="dair-ai/emotion",
-        name_config="split",
-        revision="cab853a1dbdf4c42c2b3ef2173804746df8825fe",
-        input_column="text",
-        label_column="label",
-        train_split="train",
-        validation_split="validation",  # Preserve the supplied validation split.
-        test_split="test",
-        id2label={0: "sadness", 1: "joy", 2: "love", 3: "anger", 4: "fear", 5: "surprise"},
-    ),
+        "input_column": "text",
+        "label_column": "category",
+        "splits": {"train": "train", "validation": None, "test": "test"},
+        "id2label": None,  # Infer the sorted string categories from training only.
+        "clean_training": True,  # Remove duplicate texts and texts also in validation/test.
+    },
+    "emotion": {
+        "load": {
+            "path": "dair-ai/emotion",
+            "name": "split",
+            "revision": "cab853a1dbdf4c42c2b3ef2173804746df8825fe",
+        },
+        "input_column": "text",
+        "label_column": "label",
+        "splits": {"train": "train", "validation": "validation", "test": "test"},
+        "id2label": {0: "sadness", 1: "joy", 2: "love", 3: "anger", 4: "fear", 5: "surprise"},
+        "clean_training": False,
+    },
 }
-# Clean Banking77 before splitting off validation: remove duplicate training texts
-# and training texts that also appear in the test set.
-DATA_PREPARATION = {"banking77": clean_training_rows}
 CHECKPOINTS = {
     "base": ("answerdotai/ModernBERT-base", "8949b909ec900327062f0ebf497f51aef5e6f0c8"),
     "large": ("answerdotai/ModernBERT-large", "45bb4654a4d5aaff24dd11d4781fa46d39bf8c13"),
@@ -76,33 +69,19 @@ DATA_ROOT = Path("/data")
 GPU = "L4"
 
 
-@dataclass(frozen=True)
-class Config:
-    dataset: str = "banking77"  # Change this default or pass --dataset.
-    model_size: str = "base"
-    batch_size: int = 32
-    num_train_epochs: int = 2
-    learning_rate: float = 5e-5
-    max_length: int = 128
-    seed: int = 42
-    validation_fraction: float = 0.1
-    train_per_class: int = 0  # 0 uses all training examples after validation is split off.
-    target_accuracy: float = 0.95
-    smoke: bool = False
-
-    def __post_init__(self):
-        if self.dataset not in DATASETS:
-            raise ValueError(f"dataset must be one of {list(DATASETS)}")
-        if self.model_size not in CHECKPOINTS:
-            raise ValueError(f"model_size must be one of {list(CHECKPOINTS)}")
-        if self.batch_size < 1 or self.num_train_epochs < 1 or self.learning_rate <= 0:
-            raise ValueError("batch size, epochs and learning rate must be positive")
-        if not 1 <= self.max_length <= 8192:
-            raise ValueError("max_length must be between 1 and 8192")
-        if not 0 < self.validation_fraction < 1 or self.train_per_class < 0:
-            raise ValueError("invalid validation fraction or train_per_class")
-        if not 0 < self.target_accuracy <= 1:
-            raise ValueError("target_accuracy must be in (0, 1]")
+DEFAULTS = {
+    "dataset": "banking77",  # Change this default or pass --dataset.
+    "model_size": "base",
+    "batch_size": 32,
+    "num_train_epochs": 2,
+    "learning_rate": 5e-5,
+    "max_length": 128,
+    "seed": 42,
+    "validation_fraction": 0.1,
+    "train_per_class": 0,  # 0 uses all training examples after validation is split off.
+    "target_accuracy": 0.95,
+    "smoke": False,
+}
 
 
 # ---------------------------------- SETUP END ----------------------------------#
@@ -125,6 +104,90 @@ vol = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
 
 def write_json(path, value):
     Path(path).write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+
+
+def load_data(settings, config):
+    from datasets import ClassLabel, DatasetDict, Value, load_dataset
+    from sklearn.model_selection import train_test_split
+
+    raw = load_dataset(**settings["load"])
+    text_column, label_column = settings["input_column"], settings["label_column"]
+    training = raw[settings["splits"]["train"]]
+    if settings["id2label"] is None:
+        feature = training.features[label_column]
+        labels = (
+            feature.names
+            if isinstance(feature, ClassLabel)
+            else [str(value) for value in sorted(training.unique(label_column))]
+        )
+    else:
+        labels = [settings["id2label"][i] for i in range(len(settings["id2label"]))]
+    ds = DatasetDict()
+    for role, split in settings["splits"].items():
+        if split is None:
+            continue
+        data = raw[split].select_columns([text_column, label_column])
+        data = data.rename_columns({text_column: "text", label_column: "label"})
+        # CSV labels use large_string; ClassLabel maps names only from string storage.
+        if data.features["label"].dtype == "large_string":
+            data = data.cast_column("label", Value("string"))
+        data = data.cast_column("label", ClassLabel(names=labels))
+        if any(label is None or not 0 <= label < len(labels) for label in data["label"]):
+            raise ValueError(f"{split}: labels must be class IDs in 0..{len(labels) - 1}")
+        ds[role] = data.add_column("example_id", [f"{split}-{i}" for i in range(len(data))])
+    audit = {"original_sizes": {split: len(data) for split, data in ds.items()}}
+
+    if settings["clean_training"]:
+
+        def normalize(text):
+            return " ".join(text.casefold().split())
+
+        held_out = {
+            normalize(text)
+            for split in ("validation", "test")
+            if split in ds
+            for text in ds[split]["text"]
+        }
+        seen, keep = {}, []
+        for i, row in enumerate(ds["train"]):
+            text = normalize(row["text"])
+            if text in held_out:
+                continue
+            if text in seen and seen[text] != row["label"]:
+                raise ValueError(f"Conflicting training labels for {text!r}")
+            if text not in seen:
+                seen[text] = row["label"]
+                keep.append(i)
+        audit["removed_training_rows"] = len(ds["train"]) - len(keep)
+        ds["train"] = ds["train"].select(keep)
+
+    if "validation" not in ds:
+        train_ids, validation_ids = train_test_split(
+            range(len(ds["train"])),
+            test_size=config["validation_fraction"],
+            random_state=config["seed"],
+            stratify=ds["train"]["label"],
+        )
+        ds["validation"] = ds["train"].select(validation_ids)
+        ds["train"] = ds["train"].select(train_ids)
+    if config["train_per_class"]:
+        shuffled = ds["train"].shuffle(seed=config["seed"])
+        counts, keep = [0] * len(labels), []
+        for i, label in enumerate(shuffled["label"]):
+            if counts[label] < config["train_per_class"]:
+                counts[label] += 1
+                keep.append(i)
+        if min(counts) < config["train_per_class"]:
+            raise ValueError("Not enough training examples for the requested train_per_class")
+        ds["train"] = shuffled.select(keep)
+    if config["smoke"]:
+        ds = DatasetDict(
+            {
+                split: data.shuffle(seed=config["seed"]).select(range(min(128, len(data))))
+                for split, data in ds.items()
+            }
+        )
+    return ds, labels, audit
 
 
 def tokenizer_function_logic(examples, tokenizer, max_length):
@@ -213,29 +276,22 @@ class Trainer:
         )
         from transformers import Trainer as HFTrainer
 
-        self.config = Config(**config)
+        self.config = config
         if not re.fullmatch(r"[A-Za-z0-9_-]+", run_name):
             raise ValueError("run_name must contain only letters, numbers, hyphens and underscores")
         run_dir = DATA_ROOT / "runs" / run_name
         run_dir.mkdir(parents=True, exist_ok=False)  # Never delete a previous run.
         try:
-            set_seed(self.config.seed)  # Before initializing the classification head.
-            checkpoint, revision = CHECKPOINTS[self.config.model_size]
-            dataset_config = DATASETS[self.config.dataset]
-            ds, labels, data_audit = load_classification_dataset(
-                dataset_config,
-                seed=self.config.seed,
-                validation_fraction=self.config.validation_fraction,
-                train_per_class=self.config.train_per_class,
-                smoke=self.config.smoke,
-                prepare_train=DATA_PREPARATION.get(self.config.dataset),
-            )
+            set_seed(self.config["seed"])  # Before initializing the classification head.
+            checkpoint, revision = CHECKPOINTS[self.config["model_size"]]
+            dataset_config = DATASETS[self.config["dataset"]]
+            ds, labels, data_audit = load_data(dataset_config, config)
             id2label = dict(enumerate(labels))
             label2id = {v: k for k, v in id2label.items()}
             self.tokenizer = AutoTokenizer.from_pretrained(checkpoint, revision=revision)
             tokenized = ds.map(
                 tokenizer_function_logic,
-                fn_kwargs={"tokenizer": self.tokenizer, "max_length": self.config.max_length},
+                fn_kwargs={"tokenizer": self.tokenizer, "max_length": self.config["max_length"]},
                 batched=True,
                 remove_columns=ds["train"].column_names,
                 desc="Tokenizing",
@@ -251,15 +307,15 @@ class Trainer:
             )
             training_args = TrainingArguments(
                 output_dir=str(run_dir / "checkpoints"),
-                num_train_epochs=self.config.num_train_epochs,
-                max_steps=5 if self.config.smoke else -1,
-                learning_rate=self.config.learning_rate,
-                per_device_train_batch_size=self.config.batch_size,
-                per_device_eval_batch_size=self.config.batch_size,
+                num_train_epochs=self.config["num_train_epochs"],
+                max_steps=5 if self.config["smoke"] else -1,
+                learning_rate=self.config["learning_rate"],
+                per_device_train_batch_size=self.config["batch_size"],
+                per_device_eval_batch_size=self.config["batch_size"],
                 bf16=True,
                 optim="adamw_torch_fused",
                 logging_strategy="steps",
-                logging_steps=1 if self.config.smoke else 50,
+                logging_steps=1 if self.config["smoke"] else 50,
                 eval_strategy="epoch",
                 save_strategy="epoch",
                 save_total_limit=2,
@@ -268,8 +324,8 @@ class Trainer:
                 greater_is_better=True,
                 report_to="none",
                 run_name=run_name,
-                seed=self.config.seed,
-                data_seed=self.config.seed,
+                seed=self.config["seed"],
+                data_seed=self.config["seed"],
                 disable_tqdm=True,
             )
             trainer = HFTrainer(
@@ -286,7 +342,7 @@ class Trainer:
                 "config": config,
                 "source": source,
                 "model": {"name": checkpoint, "revision": revision},
-                "dataset": {"loader": asdict(dataset_config), **data_audit},
+                "dataset": {"settings": dataset_config, **data_audit},
                 "labels": labels,
                 "classification_batch": check_classification_batch(
                     trainer.model, trainer.data_collator, tokenized["train"]
@@ -303,7 +359,7 @@ class Trainer:
                     )
                 },
                 "hardware": {"gpu": torch.cuda.get_device_name(), "cuda": torch.version.cuda},
-                "smoke_only": self.config.smoke,
+                "smoke_only": self.config["smoke"],
             }
             write_json(run_dir / "manifest.json", manifest)
             started = time.perf_counter()
@@ -316,7 +372,7 @@ class Trainer:
                 trainer, tokenized["validation"], ds["validation"], run_dir, "validation"
             )
             threshold = select_threshold(
-                validation_probs, ds["validation"]["label"], self.config.target_accuracy
+                validation_probs, ds["validation"]["label"], self.config["target_accuracy"]
             )
             # Use the frozen validation threshold on test. Never optimize it on test.
             test, test_probs = self.eval_model(
@@ -324,7 +380,7 @@ class Trainer:
             )
             summary = {
                 "run_name": run_name,
-                "smoke_only": self.config.smoke,
+                "smoke_only": self.config["smoke"],
                 "split_sizes": {split: len(ds[split]) for split in ds},
                 "training_seconds": training_seconds,
                 "training": training.metrics,
@@ -333,7 +389,7 @@ class Trainer:
                 "validation": validation,
                 "test": test,
                 "selective": {
-                    "target_validation_accuracy": self.config.target_accuracy,
+                    "target_validation_accuracy": self.config["target_accuracy"],
                     "threshold": threshold,
                     "validation": selective_metrics(
                         validation_probs, ds["validation"]["label"], threshold
@@ -392,26 +448,27 @@ class Trainer:
             evaluation_seconds=elapsed,
             examples_per_second=len(raw) / elapsed,
             # Batched throughput, NOT online single-request latency.
-            evaluation_batch_size=self.config.batch_size,
+            evaluation_batch_size=self.config["batch_size"],
         )
         return metrics, probs
 
 
 @app.local_entrypoint()
 def main(
-    dataset: str = Config.dataset,
-    smoke: bool = Config.smoke,
-    model_size: str = Config.model_size,
-    epochs: int = Config.num_train_epochs,
-    learning_rate: float = Config.learning_rate,
-    batch_size: int = Config.batch_size,
-    max_length: int = Config.max_length,
-    seed: int = Config.seed,
-    train_per_class: int = Config.train_per_class,
-    target_accuracy: float = Config.target_accuracy,
+    dataset: str = DEFAULTS["dataset"],
+    smoke: bool = DEFAULTS["smoke"],
+    model_size: str = DEFAULTS["model_size"],
+    epochs: int = DEFAULTS["num_train_epochs"],
+    learning_rate: float = DEFAULTS["learning_rate"],
+    batch_size: int = DEFAULTS["batch_size"],
+    max_length: int = DEFAULTS["max_length"],
+    seed: int = DEFAULTS["seed"],
+    train_per_class: int = DEFAULTS["train_per_class"],
+    target_accuracy: float = DEFAULTS["target_accuracy"],
     gpu: str = GPU,
 ):
-    config = Config(
+    config = dict(
+        DEFAULTS,
         dataset=dataset,
         model_size=model_size,
         num_train_epochs=epochs,
@@ -437,7 +494,7 @@ def main(
         },
     }
     print(f"Running {run_name} on {gpu}", flush=True)
-    summary = Trainer.with_options(gpu=gpu)().train_model.remote(asdict(config), run_name, source)
+    summary = Trainer.with_options(gpu=gpu)().train_model.remote(config, run_name, source)
     destination = package_dir / "results" / run_name
     destination.mkdir(parents=True, exist_ok=False)
     # Download reports; weights and full-precision predictions remain on the Volume.

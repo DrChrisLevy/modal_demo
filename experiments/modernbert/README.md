@@ -35,8 +35,8 @@ git diff ab60b5c -- experiments/modernbert/trainer.py
 | `transformers.utils.move_cache()` | Removed | Obsolete cache migration; `HF_HOME` points at the persistent Volume. |
 | `Trainer(tokenizer=...)` | `Trainer(processing_class=...)` | Current Transformers API. |
 | W&B key required at import and baked into image command | JSON reports without W&B | Works with only Modal credentials; no API key in image layers. |
-| Dataset globals | Top-level `DATASETS`, optional `DATA_PREPARATION`, and training `Config` | Keep dataset selection and schema out of training code. |
-| Emotion's supplied validation split | Preserve configured validation, or create it when `validation_split=None` | Banking77 needs a holdout; emotion keeps its supplied split. |
+| Dataset globals | Plain `DATASETS` and `DEFAULTS` dictionaries at the top | Keep all experiment settings together. |
+| Emotion's supplied validation split | Preserve configured validation, or create it when its split is `None` | Banking77 needs a holdout; emotion keeps its supplied split. |
 | HF Python dataset loader | Generic `load_dataset`; Banking77 config points at original versioned CSVs | Current Datasets no longer executes dataset loading scripts. |
 | Padding in dataset mapping | Dynamic padding in `DataCollatorWithPadding` | Padding now follows actual training batches. |
 | Select last checkpoint for evaluation | Save/evaluate weights selected by validation macro-F1 | The last checkpoint need not be the best. |
@@ -51,35 +51,29 @@ Primary docs: [Modal index](https://modal.com/llms.txt),
 
 ## Dataset configuration
 
-Select a configured dataset with `--dataset emotion` or change `Config.dataset` at
-the top. To add a dataset, add a `DatasetConfig` entry to `DATASETS` in that same
-setup block. For example:
+Select a dataset with `--dataset emotion` or change `DEFAULTS["dataset"]` at the top.
+Each entry in `DATASETS` is a plain dictionary. Its `load` dictionary is passed
+directly to Hugging Face's `load_dataset`. For example:
 
 ```python
-"my_dataset": DatasetConfig(
-    name="your-org/your-dataset",  # Or "csv" / "parquet" with data_files URLs.
-    name_config=None,
-    revision="your-pinned-revision",
-    input_column="message",
-    label_column="intent",
-    train_split="training",
-    validation_split="dev",  # None reserves a stratified fraction of training.
-    test_split="heldout",
-    id2label={0: "negative", 1: "positive"},
-),
+"my_dataset": {
+    "load": {"path": "your-org/your-dataset", "revision": "your-pinned-revision"},
+    "input_column": "message",
+    "label_column": "intent",
+    "splits": {"train": "training", "validation": "dev", "test": "heldout"},
+    "id2label": {0: "negative", 1: "positive"},
+    "clean_training": False,
+},
 ```
 
-`id2label=None` uses the source `ClassLabel` order, or infers a vocabulary from
-training targets only. String classes are sorted; plain integer IDs must be
-consecutive from zero. Explicit `id2label` controls the meanings of integer IDs
-and the order of string class names. Validation/test classes must be in that vocabulary.
-All three evaluation roles need labeled examples. Supplied validation/test rows
-retain their order and are never subsampled except in smoke mode.
+Set the validation split to `None` to reserve a stratified fraction of training.
+`id2label=None` uses existing `ClassLabel` names or sorted training categories.
+Otherwise supply class IDs `0..N-1` and their names, as in the original script.
+Hugging Face's `ClassLabel` converts the target column to integer IDs.
 
-`DATA_PREPARATION` selects optional training-row preparation functions. Banking77
-opts into duplicate/holdout-overlap removal; emotion does not. Hooks receive only
-held-out text, never held-out targets. Few-shot training selection happens after
-validation is fixed. No dataset-specific branch exists in the trainer or loader.
+`clean_training=True` removes duplicate training texts and training texts present
+in validation/test, using only their text. Banking77 enables it; emotion preserves
+its supplied rows. Few-shot sampling happens after validation is fixed.
 
 ## Classification columns and loss
 
@@ -100,9 +94,8 @@ The model explicitly sets `problem_type="single_label_classification"`, includin
 binary tasks with two logits. Before training, a real collated batch is forwarded
 through the model and its finite scalar loss is checked against PyTorch
 `cross_entropy(logits, labels)`. Batch columns, shapes, dtype, and loss are saved in
-`manifest.json` under `classification_batch`. Float targets, multi-label arrays,
-missing labels and out-of-range IDs fail clearly. This trainer handles binary and
-multiclass **single-label** tasks; it does not silently select regression or BCE.
+`manifest.json` under `classification_batch`. This trainer handles binary and
+multiclass **single-label** tasks.
 
 ## Run
 
@@ -187,13 +180,11 @@ uv run --with datasets==5.0.1 --with numpy==2.5.3 --with scikit-learn==1.9.1 \
   python -m unittest discover -s experiments/modernbert/tests -v
 ```
 
-The tests check custom columns and splits, label order, invalid targets, leakage
-cleanup, calibration arithmetic, confidence ties and validation/test separation.
+The tests check custom columns and splits, label order, leakage cleanup,
+calibration arithmetic, confidence ties and validation/test separation.
 Run both dataset smoke commands to check actual GPU batches/loss, training,
 checkpoint reload, evaluation, persistence and local report downloads.
 
-The configuration refactor passed 13 local tests and both L4 smoke runs. Each run
-verified integer labels, the expected logits shape, cross-entropy loss, five finite
-training losses/gradient norms, checkpoint reload and artifact downloads. A full
-data check also confirmed that Banking77's label order and every split ID still
-match the original baseline. See [the verification record](reports/classification-validation.json).
+The [earlier verification record](reports/classification-validation.json) identifies
+the code commit and two GPU runs it checked. Run manifests preserve the same
+batch/loss checks for subsequent versions.
