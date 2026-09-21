@@ -15,7 +15,7 @@ from uuid import uuid4
 
 import modal
 
-from .image import BOOT, CODEX_VERSION, tools_image
+from runner.image import BOOT, CODEX_VERSION, tools_image
 
 REPO, REF, DIRECTORY = (os.environ[f"RUN_{key}"] for key in ("REPO", "REF", "DIRECTORY"))
 PORT = int(os.environ["RUN_PORT"])

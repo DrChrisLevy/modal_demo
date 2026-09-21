@@ -7,8 +7,9 @@ COMPOSE_SHA256 = "7af95166a730b87e172d4fc9aefea8725d3c6c7327d59149267b452114ddb7
 CODEX_VERSION = "0.155.1"
 CODEX_SHA256 = "a65b895c6ac1a73629bbe4b864640c86133e94a43b4d67b3103044e1a306d5a2"
 
-# Docker runs inside the VM. No host Docker socket or laptop daemon is involved.
+# The Modal VM runs its own Docker engine.
 BOOT = """
+# Start Docker, wait for it to be ready, then keep the VM alive.
 set -eu
 mkdir -p /workspace /artifacts
 dockerd --host unix:///var/run/docker.sock >/tmp/dockerd.log 2>&1 &
