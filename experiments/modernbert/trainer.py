@@ -32,15 +32,19 @@ from experiments.modernbert.evaluation import (
 
 # ---------------------------------- SETUP BEGIN ----------------------------------#
 # Add or edit datasets here; the training/evaluation code below is dataset-independent.
-BANKING_REVISION = "9d081458ff52e53cf7e848f414e6e9344e4e6696"
-BANKING_URL = (
-    "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/"
-    f"{BANKING_REVISION}/banking_data"
-)
 DATASETS = {
     "banking77": DatasetConfig(
         name="csv",  # The original HF Python loading script is no longer supported.
-        data_files={"train": f"{BANKING_URL}/train.csv", "test": f"{BANKING_URL}/test.csv"},
+        data_files={
+            "train": (
+                "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/"
+                "9d081458ff52e53cf7e848f414e6e9344e4e6696/banking_data/train.csv"
+            ),
+            "test": (
+                "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/"
+                "9d081458ff52e53cf7e848f414e6e9344e4e6696/banking_data/test.csv"
+            ),
+        },
         input_column="text",
         label_column="category",
         train_split="train",
