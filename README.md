@@ -2,9 +2,6 @@
 
 Run a Docker Compose app locally or in a Modal VM, then let Codex work on it.
 
-For GPU classifier training, see the independent
-[ModernBERT / Banking77 experiment](experiments/modernbert/README.md).
-
 ## Setup
 
 Requires `uv`, Docker Compose (local runs only), authenticated GitHub CLI (`gh auth login`),
