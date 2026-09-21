@@ -191,3 +191,9 @@ The tests check custom columns and splits, label order, invalid targets, leakage
 cleanup, calibration arithmetic, confidence ties and validation/test separation.
 Run both dataset smoke commands to check actual GPU batches/loss, training,
 checkpoint reload, evaluation, persistence and local report downloads.
+
+The configuration refactor passed 13 local tests and both L4 smoke runs. Each run
+verified integer labels, the expected logits shape, cross-entropy loss, five finite
+training losses/gradient norms, checkpoint reload and artifact downloads. A full
+data check also confirmed that Banking77's label order and every split ID still
+match the original baseline. See [the verification record](reports/classification-validation.json).
