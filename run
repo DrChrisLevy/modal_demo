@@ -12,9 +12,42 @@ case "$action" in
   list)
     if [ "$#" -ne 1 ]; then echo 'Usage: ./run list' >&2; exit 2; fi
     exec uv run --frozen python -m runner.remote list ;;
-  up|down|test|shell)
-    if [ "$#" -gt 3 ]; then echo 'Usage: ./run {up|down|test|shell} [remote [name]]' >&2; exit 2; fi
+  shell)
+    if [ "$#" -gt 2 ]; then echo 'Usage: ./run shell [name]' >&2; exit 2; fi
+    if [ "$target" = local ]; then
+      cd "$RUN_DIRECTORY"
+      exec docker compose exec web bash
+    fi
+    export RUN_NAME="$target"
+    exec uv run --frozen python -m runner.remote shell ;;
+  codex)
+    shift
+    remote_codex=false
+    if [ "$#" -gt 0 ] && [ "$1" != --resume ]; then
+      export RUN_NAME="$1"
+      shift
+      remote_codex=true
+    fi
+    if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != --resume ]; }; then
+      echo 'Usage: ./run codex [name] [--resume]' >&2; exit 2
+    fi
+    if "$remote_codex"; then
+      exec uv run --frozen python -m runner.remote codex "$@"
+    fi
+    codex_args=(--dangerously-bypass-approvals-and-sandbox)
+    if [ "${1:-}" = --resume ]; then
+      codex_args=(resume --all --include-non-interactive "${codex_args[@]}")
+    fi
+    exec codex "${codex_args[@]}" ;;
+  up|down|test)
+    if [ "$#" -gt 3 ]; then echo 'Usage: ./run {up|down|test} [remote [name]]' >&2; exit 2; fi
     case "$target" in
+      --volumes)
+        if [ "$action" != down ] || [ "$#" -ne 2 ]; then
+          echo 'Usage: ./run down --volumes' >&2; exit 2
+        fi
+        cd "$RUN_DIRECTORY"
+        exec docker compose down --volumes ;;
       remote)
         export RUN_NAME="${3:-app}"
         exec uv run --frozen python -m runner.remote "$action" "$tests" ;;
@@ -25,7 +58,6 @@ case "$action" in
           up) docker compose up --build --wait; echo "http://localhost:$RUN_PORT" ;;
           down) docker compose down ;;
           test) bash -c "$tests" ;;
-          shell) exec docker compose exec web bash ;;
         esac ;;
       *) echo 'Target must be local or remote.' >&2; exit 2 ;;
     esac ;;
@@ -40,7 +72,10 @@ case "$action" in
       *) echo 'Usage: ./run agent [name] "your task"' >&2; exit 2 ;;
     esac ;;
   help|--help|-h)
-    echo './run {up|down|test|shell} [remote [name]]'
+    echo './run {up|down|test} [remote [name]]'
+    echo './run down --volumes      # stop local containers and delete the database'
+    echo './run shell [name]        # local container, or a named remote VM'
+    echo './run codex [name] [--resume] # Codex here or in a named VM; skip sandbox and approvals'
     echo './run list                # show running remote environments tracked here'
     echo 'Shell opens the local web container or the remote VM at /workspace/repo, matching the agent.'
     echo './run agent "task"         # fresh VM; stops when finished'

@@ -286,11 +286,21 @@ def main():
     if sys.argv[1] == "list":
         list_running()
         return
-    if sys.argv[1] == "shell":
+    if sys.argv[1] in ("shell", "codex"):
         vm = current(cleanup=False)
         if vm is None:
             raise RuntimeError(f"Start this environment with ./run up remote {NAME} first")
-        command = "cd /workspace/repo && exec bash"
+        command = "bash"
+        if sys.argv[1] == "codex":
+            vm.run(
+                "printenv OPENAI_API_KEY | codex login --with-api-key >/dev/null",
+                secrets=[modal.Secret.from_name("openai-secret", required_keys=["OPENAI_API_KEY"])],
+            )
+            command = "codex"
+            if "--resume" in sys.argv[2:]:
+                command += " resume --all --include-non-interactive"
+            command += " --dangerously-bypass-approvals-and-sandbox"
+        command = f"cd /workspace/repo && exec {command}"
         subprocess.run(
             [
                 sys.executable,
@@ -304,7 +314,7 @@ def main():
             check=True,
         )
         return
-    # Serialize other commands per environment; shells attach without locking.
+    # Serialize other commands per environment; interactive sessions attach without locking.
     with ACTIVE.with_suffix(".lock").open("a") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

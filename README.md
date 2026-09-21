@@ -19,10 +19,11 @@ For agents, create a Modal Secret named `openai-secret` containing `OPENAI_API_K
 Start Docker, then run:
 
 ```bash
-./run up    # build and serve at http://localhost:8000
-./run test  # run integration tests and lint
-./run shell # open a shell in the web container; exit to return
-./run down  # stop containers; keep the database
+./run up              # build and serve at http://localhost:8000
+./run test            # run integration tests and lint
+./run shell           # open a shell in the web container; exit to return
+./run down            # stop containers; keep the database
+./run down --volumes  # stop containers and delete the database
 ```
 
 ## Remote
@@ -33,7 +34,7 @@ Push changes before starting a new VM.
 ```bash
 ./run up remote demo      # start a VM and print the app URL
 ./run list                # list running remote environments tracked on this machine
-./run shell remote demo   # open a shell in the VM; exit to return
+./run shell demo          # open a shell in the VM; exit to return
 ./run agent demo "Add task filtering and tests. Do not push."
 ./run test remote demo    # run integration tests and lint in that VM
 ./run down remote demo    # save changes and logs, then destroy the VM
@@ -47,7 +48,14 @@ The remote shell starts in `/workspace/repo`, the same directory as the agent.
 Use `cd example && docker compose exec web bash` to enter the app container.
 Exiting either shell leaves the app running.
 
-To resume a previous agent session from the remote VM shell with sandboxing and approval prompts disabled, run `codex resume --all --include-non-interactive --dangerously-bypass-approvals-and-sandbox`.
+## Interactive Codex
+
+```bash
+./run codex                # start in the current checkout
+./run codex --resume       # resume here
+./run codex demo           # connect to demo and start Codex
+./run codex demo --resume  # connect to demo and pick a previous session
+```
 
 ## One-shot agents
 
