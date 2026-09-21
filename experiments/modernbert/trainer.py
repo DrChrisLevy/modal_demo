@@ -1,386 +1,357 @@
-# ruff: noqa
-import os
-import shutil
+"""Fine-tune ModernBERT on Modal; adapted from Chris Levy's December 2024 trainer.
+
+Run from the repository root:
+    uv run modal run -m experiments.modernbert.trainer --smoke
+    uv run modal run -m experiments.modernbert.trainer
+"""
+
+import hashlib
+import json
+import re
+import subprocess
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from uuid import uuid4
 
 import modal
-from dotenv import load_dotenv
-from modal import Image, build, enter
 
-# ---------------------------------- SETUP BEGIN ----------------------------------#
-env_file = ".env"  # path to local env file with wandb api key WANDB_API_KEY=<>
-ds_name = "dair-ai/emotion"  # name of the Hugging Face dataset to use
-ds_name_config = None  # for hugging face datasets that have multiple config instances. For example cardiffnlp/tweet_eval
-train_split = "train"  # name of the tain split in the dataset
-validation_split = "validation"  # name of the validation split in the dataset
-test_split = "test"  # name of the test split in the dataset
-# define the labels for the dataset
-id2label = {0: "sadness", 1: "joy", 2: "love", 3: "anger", 4: "fear", 5: "surprise"}
-# Often commonly called "inputs". Depends on the dataset. This is the input text to the model.
-# This field will be called input_ids during tokenization/training/eval.
-input_column = "text"
-# This is the column name from the dataset which is the target to train on.
-# It will get renamed to "label" during tokenization/training/eval.
-label_column = "label"
-checkpoint = "answerdotai/ModernBERT-base"  # name of the Hugging Face model to fine tune
-batch_size = 32  # depends on GPU size and model size
-GPU_SIZE = "A100"  # https://modal.com/docs/guide/gpu#specifying-gpu-type
-num_train_epochs = 2
-learning_rate = 5e-5  # learning rate for the optimizer
-
-
-# This is the logic for tokenizing the input text. It's used in the dataset map function
-# during training and evaluation. Of importance is the max_length parameter which
-# you will want to increase for input texts that are longer. Traditionally bert and other encoder
-# models have a max length of 512 tokens. But ModernBERT has a max length of 8192 tokens.
-def tokenizer_function_logic(example, tokenizer):
-    return tokenizer(example[input_column], padding=True, truncation=True, return_tensors="pt", max_length=512)
-
-
-wandb_project = "hugging_face_training_jobs"  # name of the wandb project to use
-pre_fix_name = ""  # optional prefix to the run name to differentiate it from other experiments
-# This is a label that gets assigned to any example that is not classified by the model
-# according to some probability threshold. It's only used for evaluation.
-unknown_label_int = -1
-unknown_label_str = "UNKNOWN"
-# define the run name which is used in wandb and the model name when saving model checkpoints
-run_name = f"{ds_name}-{ds_name_config}-{checkpoint}-{batch_size=}-{learning_rate=}-{num_train_epochs=}"
-# ---------------------------------- SETUP END----------------------------------#
-
-if pre_fix_name:
-    run_name = f"{pre_fix_name}-{run_name}"
-
-label2id = {v: k for k, v in id2label.items()}
-path_to_ds = os.path.join("/data", ds_name, ds_name_config if ds_name_config else "")
-
-load_dotenv(env_file)
-app = modal.App("trainer")
-
-# Non Flash-Attn Image
-# image = Image.debian_slim(python_version="3.11").run_commands(
-#     "apt-get update && apt-get install -y htop git",
-#     "pip3 install torch torchvision torchaudio",
-#     "pip install git+https://github.com/huggingface/transformers.git datasets accelerate scikit-learn python-dotenv wandb",
-#     # f'huggingface-cli login --token {os.environ["HUGGING_FACE_ACCESS_TOKEN"]}',
-#     f'wandb login  {os.environ["WANDB_API_KEY"]}',
-# )
-
-# Flash-Attn Image
-# https://modal.com/docs/guide/cuda#for-more-complex-setups-use-an-officially-supported-cuda-image
-cuda_version = "12.4.0"  # should be no greater than host CUDA version
-flavor = "devel"  #  includes full CUDA toolkit
-operating_sys = "ubuntu22.04"
-tag = f"{cuda_version}-{flavor}-{operating_sys}"
-
-image = (
-    modal.Image.from_registry(f"nvidia/cuda:{tag}", add_python="3.11")
-    .apt_install("git", "htop")
-    .pip_install(
-        "ninja",  # required to build flash-attn
-        "packaging",  # required to build flash-attn
-        "wheel",  # required to build flash-attn
-        "torch",
-        "git+https://github.com/huggingface/transformers.git",
-        "datasets",
-        "accelerate",
-        "scikit-learn",
-        "python-dotenv",
-        "wandb",
-    )
-    .run_commands(
-        "pip install flash-attn --no-build-isolation",  # add flash-attn
-        f'wandb login  {os.environ["WANDB_API_KEY"]}',
-    )
+from experiments.modernbert.data import DATA_REVISION, prepare_banking77
+from experiments.modernbert.evaluation import (
+    classification_metrics,
+    select_threshold,
+    selective_metrics,
 )
 
-vol = modal.Volume.from_name("trainer-vol", create_if_missing=True)
+# ---------------------------------- SETUP BEGIN ----------------------------------#
+CHECKPOINTS = {
+    "base": ("answerdotai/ModernBERT-base", "8949b909ec900327062f0ebf497f51aef5e6f0c8"),
+    "large": ("answerdotai/ModernBERT-large", "45bb4654a4d5aaff24dd11d4781fa46d39bf8c13"),
+}
+VOLUME_NAME = "modernbert-banking77"
+DATA_ROOT = Path("/data")
+
+
+@dataclass(frozen=True)
+class Config:
+    model_size: str = "base"
+    batch_size: int = 32
+    num_train_epochs: int = 2
+    learning_rate: float = 5e-5
+    max_length: int = 128
+    seed: int = 42
+    validation_fraction: float = 0.1
+    train_per_class: int = 0  # 0 uses all training examples after validation is split off.
+    target_accuracy: float = 0.95
+    smoke: bool = False
+
+    def __post_init__(self):
+        if self.model_size not in CHECKPOINTS:
+            raise ValueError("model_size must be base or large")
+        if self.batch_size < 1 or self.num_train_epochs < 1 or self.learning_rate <= 0:
+            raise ValueError("batch size, epochs and learning rate must be positive")
+        if not 1 <= self.max_length <= 8192:
+            raise ValueError("max_length must be between 1 and 8192")
+        if not 0 < self.validation_fraction < 1 or self.train_per_class < 0:
+            raise ValueError("invalid validation fraction or train_per_class")
+        if not 0 < self.target_accuracy <= 1:
+            raise ValueError("target_accuracy must be in (0, 1]")
+
+
+# ---------------------------------- SETUP END ----------------------------------#
+app = modal.App("modernbert-banking77")
+image = (
+    modal.Image.debian_slim(python_version="3.12")
+    .uv_pip_install(
+        "torch==2.14.0",
+        "transformers==5.17.0",
+        "datasets==5.0.1",
+        "accelerate==1.15.0",
+        "scikit-learn==1.9.1",
+        "numpy==2.5.3",
+    )
+    .env({"HF_HOME": "/data/huggingface", "TOKENIZERS_PARALLELISM": "false"})
+    .add_local_python_source("experiments")
+)
+vol = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
+
+
+def write_json(path, value):
+    Path(path).write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+
+
+def tokenizer_function_logic(examples, tokenizer, max_length):
+    # A standalone function makes Dataset.map caching independent of the Modal class.
+    return tokenizer(examples["text"], truncation=True, max_length=max_length)
 
 
 @app.cls(
     image=image,
-    volumes={"/data": vol},
-    secrets=[modal.Secret.from_dotenv(filename=env_file)],
-    gpu=GPU_SIZE,
-    timeout=60 * 60 * 10,
-    container_idle_timeout=300,
+    volumes={str(DATA_ROOT): vol},
+    gpu="L4",
+    cpu=4,
+    memory=16384,
+    timeout=60 * 30,
+    scaledown_window=60,
 )
 class Trainer:
-    def __init__(self, reload_ds=True):
+    @modal.enter()
+    def setup(self):
         import torch
 
-        self.reload_ds = reload_ds
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
-    @build()
-    @enter()
-    def setup(self):
-        from datasets import load_dataset, load_from_disk
-        from transformers import (
-            AutoTokenizer,
-        )
-        from transformers.utils import move_cache
-
-        os.makedirs("/data", exist_ok=True)
-
-        if not os.path.exists(path_to_ds) or self.reload_ds:
-            try:
-                # clean out the dataset folder
-                shutil.rmtree(path_to_ds)
-            except FileNotFoundError:
-                pass
-            self.ds = load_dataset(ds_name, ds_name_config)
-            # Save dataset to disk
-            self.ds.save_to_disk(path_to_ds)
-        else:
-            self.ds = load_from_disk(path_to_ds)
-
-        move_cache()
-
-        # Load tokenizer and model
-        self.tokenizer = AutoTokenizer.from_pretrained(checkpoint)
-
-    def tokenize_function(self, example):
-        return tokenizer_function_logic(example, self.tokenizer)
+        if not torch.cuda.is_available():
+            raise RuntimeError("This experiment requires a CUDA GPU")
+        torch.set_float32_matmul_precision("high")
 
     def compute_metrics(self, pred):
-        """
-        To debug this function manually on some sample input in ipython you can create an input
-        pred object like this:
-        from transformers import EvalPrediction
         import numpy as np
-        logits=[[-0.9559,  0.7553],
-        [ 2.0987, -2.3868],
-        [ 1.0143, -1.1551],
-        [ 1.3666, -1.6074]]
-        label_ids = [1, 0, 1, 0]
-        pred = EvalPrediction(predictions=logits, label_ids=label_ids)
-        """
-        import numpy as np
-        import torch
-        from sklearn.metrics import f1_score
+        from scipy.special import softmax
 
-        # pred is EvalPrediction object i.e. from transformers import EvalPrediction
-        logits = torch.tensor(pred.predictions)  # raw prediction logits from the model
-        label_ids = pred.label_ids  # integer label ids classes
-        labels = torch.tensor(label_ids).double().numpy()
-
-        probs = logits.softmax(dim=-1).float().numpy()  # probabilities for each class
-        preds = np.argmax(probs, axis=1)  # take the label with the highest probability
-        f1_micro = f1_score(labels, preds, average="micro", zero_division=True)
-        f1_macro = f1_score(labels, preds, average="macro", zero_division=True)
-        return {"f1_micro": f1_micro, "f1_macro": f1_macro}
+        return classification_metrics(
+            softmax(pred.predictions.astype(np.float64), axis=-1), pred.label_ids
+        )
 
     @modal.method()
-    def train_model(self):
-        import wandb
+    def train_model(self, config: dict, run_name: str, source: dict):
+        import importlib.metadata
+        import time
+
+        import numpy as np
         import torch
-        import os
-        from datasets import load_from_disk
         from transformers import (
             AutoConfig,
             AutoModelForSequenceClassification,
+            AutoTokenizer,
             DataCollatorWithPadding,
-            Trainer,
             TrainingArguments,
+            set_seed,
         )
+        from transformers import Trainer as HFTrainer
 
-        os.environ["WANDB_PROJECT"] = wandb_project
-        # Remove previous training model saves if exists for same run_name
+        self.config = Config(**config)
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", run_name):
+            raise ValueError("run_name must contain only letters, numbers, hyphens and underscores")
+        run_dir = DATA_ROOT / "runs" / run_name
+        run_dir.mkdir(parents=True, exist_ok=False)  # Never delete a previous run.
         try:
-            shutil.rmtree(os.path.join("/data", run_name))
-        except FileNotFoundError:
-            pass
+            set_seed(self.config.seed)  # Before initializing the classification head.
+            checkpoint, revision = CHECKPOINTS[self.config.model_size]
+            ds, labels, data_audit = prepare_banking77(
+                seed=self.config.seed,
+                validation_fraction=self.config.validation_fraction,
+                train_per_class=self.config.train_per_class,
+                smoke=self.config.smoke,
+            )
+            id2label = dict(enumerate(labels))
+            label2id = {v: k for k, v in id2label.items()}
+            self.tokenizer = AutoTokenizer.from_pretrained(checkpoint, revision=revision)
+            tokenized = ds.map(
+                tokenizer_function_logic,
+                fn_kwargs={"tokenizer": self.tokenizer, "max_length": self.config.max_length},
+                batched=True,
+                remove_columns=["text", "example_id"],
+                desc="Tokenizing",
+            )
+            configuration = AutoConfig.from_pretrained(checkpoint, revision=revision)
+            configuration.id2label = id2label
+            configuration.label2id = label2id
+            configuration.num_labels = len(labels)
+            # Native PyTorch SDPA avoids compiling an external flash-attn package.
+            model = AutoModelForSequenceClassification.from_pretrained(
+                checkpoint, revision=revision, config=configuration, attn_implementation="sdpa"
+            )
+            training_args = TrainingArguments(
+                output_dir=str(run_dir / "checkpoints"),
+                num_train_epochs=self.config.num_train_epochs,
+                max_steps=5 if self.config.smoke else -1,
+                learning_rate=self.config.learning_rate,
+                per_device_train_batch_size=self.config.batch_size,
+                per_device_eval_batch_size=self.config.batch_size,
+                bf16=True,
+                optim="adamw_torch_fused",
+                logging_strategy="steps",
+                logging_steps=1 if self.config.smoke else 50,
+                eval_strategy="epoch",
+                save_strategy="epoch",
+                save_total_limit=2,
+                load_best_model_at_end=True,
+                metric_for_best_model="f1_macro",
+                greater_is_better=True,
+                report_to="none",
+                run_name=run_name,
+                seed=self.config.seed,
+                data_seed=self.config.seed,
+                disable_tqdm=True,
+            )
+            trainer = HFTrainer(
+                model=model,
+                args=training_args,
+                train_dataset=tokenized["train"],
+                eval_dataset=tokenized["validation"],
+                data_collator=DataCollatorWithPadding(self.tokenizer, pad_to_multiple_of=8),
+                processing_class=self.tokenizer,  # Formerly tokenizer=.
+                compute_metrics=self.compute_metrics,
+            )
+            manifest = {
+                "run_name": run_name,
+                "config": config,
+                "source": source,
+                "model": {"name": checkpoint, "revision": revision},
+                "dataset": {"revision": DATA_REVISION, **data_audit},
+                "labels": labels,
+                "split_ids": {split: list(ds[split]["example_id"]) for split in ds},
+                "packages": {
+                    package: importlib.metadata.version(package)
+                    for package in (
+                        "torch",
+                        "transformers",
+                        "datasets",
+                        "accelerate",
+                        "scikit-learn",
+                    )
+                },
+                "hardware": {"gpu": torch.cuda.get_device_name(), "cuda": torch.version.cuda},
+                "smoke_only": self.config.smoke,
+            }
+            write_json(run_dir / "manifest.json", manifest)
+            started = time.perf_counter()
+            training = trainer.train()
+            training_seconds = time.perf_counter() - started
+            # load_best_model_at_end has restored the validation-selected weights.
+            trainer.save_model(str(run_dir / "best_model"))
+            trainer.save_state()
+            validation, validation_probs = self.eval_model(
+                trainer, tokenized["validation"], ds["validation"], run_dir, "validation"
+            )
+            threshold = select_threshold(
+                validation_probs, ds["validation"]["label"], self.config.target_accuracy
+            )
+            # Use the frozen validation threshold on test. Never optimize it on test.
+            test, test_probs = self.eval_model(
+                trainer, tokenized["test"], ds["test"], run_dir, "test"
+            )
+            summary = {
+                "run_name": run_name,
+                "smoke_only": self.config.smoke,
+                "split_sizes": {split: len(ds[split]) for split in ds},
+                "training_seconds": training_seconds,
+                "training": training.metrics,
+                "best_checkpoint": trainer.state.best_model_checkpoint,
+                "best_validation_f1_macro": trainer.state.best_metric,
+                "validation": validation,
+                "test": test,
+                "selective": {
+                    "target_validation_accuracy": self.config.target_accuracy,
+                    "threshold": threshold,
+                    "validation": selective_metrics(
+                        validation_probs, ds["validation"]["label"], threshold
+                    ),
+                    "test": selective_metrics(test_probs, ds["test"]["label"], threshold),
+                },
+                "peak_gpu_allocated_gb": torch.cuda.max_memory_allocated() / 1024**3,
+                "volume": VOLUME_NAME,
+                "artifact_path": f"runs/{run_name}",
+            }
+            write_json(run_dir / "summary.json", summary)
+            write_json(run_dir / "training_log.json", trainer.state.log_history)
+            print(json.dumps(summary, indent=2))
+            del model, trainer
+            torch.cuda.empty_cache()
+            # Verify that the saved checkpoint loads with the correct label mapping.
+            restored = AutoModelForSequenceClassification.from_pretrained(run_dir / "best_model")
+            assert restored.config.id2label == id2label
+            assert np.isfinite(test_probs).all()
+            return summary
+        finally:
+            vol.commit()  # Persist checkpoints and partial artifacts even on failure.
 
-        ds = load_from_disk(path_to_ds)
-        # useful for debugging and quick training: Just downsample the dataset
-        # for split in ds.keys():
-        #     ds[split] = ds[split].shuffle(seed=42).select(range(1000))
-        num_labels = len(id2label)
-        tokenized_dataset = ds.map(self.tokenize_function, batched=True)
-        if label_column != "label":
-            tokenized_dataset = tokenized_dataset.rename_column(label_column, "label")
-        data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
+    def eval_model(self, trainer, tokenized, raw, run_dir, split):
+        import time
 
-        # https://www.philschmid.de/getting-started-pytorch-2-0-transformers
-        # https://www.philschmid.de/fine-tune-modern-bert-in-2025
-        training_args = TrainingArguments(
-            output_dir=os.path.join("/data", run_name),
-            num_train_epochs=num_train_epochs,
-            learning_rate=learning_rate,
-            per_device_train_batch_size=batch_size,
-            per_device_eval_batch_size=batch_size,
-            # PyTorch 2.0 specifics
-            bf16=True,  # bfloat16 training
-            # torch_compile=True,  # optimizations but its making it slower with my code and causes errors when running with flash-attn
-            optim="adamw_torch_fused",  # improved optimizer
-            # logging & evaluation strategies
-            logging_dir=os.path.join("/data", run_name, "logs"),
-            logging_strategy="steps",
-            logging_steps=200,
-            eval_strategy="epoch",
-            save_strategy="epoch",
-            load_best_model_at_end=True,
-            metric_for_best_model="f1_macro",
-            report_to="wandb",
-            run_name=run_name,
-        )
-
-        configuration = AutoConfig.from_pretrained(checkpoint)
-        # these dropout values are noted here in case we want to tweak them in future
-        # experiments.
-        # configuration.hidden_dropout_prob = 0.1  # 0.1 is default
-        # configuration.attention_probs_dropout_prob = 0.1  # 0.1 is default
-        # configuration.classifier_dropout = None  # If None then defaults to hidden_dropout_prob
-        configuration.id2label = id2label
-        configuration.label2id = label2id
-        configuration.num_labels = num_labels
-        model = AutoModelForSequenceClassification.from_pretrained(
-            checkpoint,
-            config=configuration,
-            # TODO: Is this how to use flash-attn 2?
-            # attn_implementation="flash_attention_2",
-            # torch_dtype=torch.bfloat16,
-        )
-
-        trainer = Trainer(
-            model,
-            training_args,
-            train_dataset=tokenized_dataset[train_split],
-            eval_dataset=tokenized_dataset[validation_split],
-            data_collator=data_collator,
-            tokenizer=self.tokenizer,
-            compute_metrics=self.compute_metrics,
-        )
-
-        trainer.train()
-
-        # Log the trainer script
-        wandb.save(__file__)
-
-    def load_model(self, check_point):
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
-        import torch
-
-        model = AutoModelForSequenceClassification.from_pretrained(
-            check_point,
-            # TODO: Is this how to use flash-attn 2?
-            # attn_implementation="flash_attention_2",
-            # torch_dtype=torch.bfloat16,
-        )
-        tokenizer = AutoTokenizer.from_pretrained(check_point)
-        return tokenizer, model
-
-    @modal.method()
-    def eval_model(self, check_point=None, split=validation_split):
-        import os
         import numpy as np
-        import pandas as pd
         import torch
-        import wandb
-        from datasets import load_from_disk
+        from scipy.special import softmax
         from sklearn.metrics import classification_report
 
-        os.environ["WANDB_PROJECT"] = wandb_project
-        if check_point is None:
-            # Will use most recent checkpoint by default. It may not be the "best" checkpoint/model.
-            check_points = sorted(
-                os.listdir(os.path.join("/data/", run_name)), key=lambda x: int(x.split("-")[1]) if x.startswith("checkpoint-") else 0
-            )
-            check_point = os.path.join("/data", run_name, check_points[-1])
-        print(f"Evaluating Checkpoint {check_point}, split {split}")
-
-        tokenizer, model = self.load_model(check_point)
-
-        def tokenize_function(example):
-            return tokenizer_function_logic(example, tokenizer)
-
-        model.to(self.device)
-        test_ds = load_from_disk(path_to_ds)[split]
-
-        test_ds = test_ds.map(tokenize_function, batched=True, batch_size=batch_size)
-        if label_column != "label":
-            test_ds = test_ds.rename_column(label_column, "label")
-
-        def forward_pass(batch):
-            """
-            To debug this function manually on some sample input in ipython, take your dataset
-            that has already been tokenized and create a batch object with this code:
-            batch_size = 32
-            test_ds.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
-            small_ds = test_ds.take(batch_size)
-            batch = {k: torch.stack([example[k] for example in small_ds]) for k in small_ds[0].keys()}
-            """
-            inputs = {k: v.to(self.device) for k, v in batch.items() if k in tokenizer.model_input_names}
-            with torch.no_grad():
-                output = model(**inputs)
-                probs = torch.softmax(output.logits, dim=-1).round(decimals=2)
-                probs = probs.float()  # convert to float32 only for numpy compatibility. # TODO: Related to using flash-attn 2
-            return {"probs": probs.cpu().numpy()}
-
-        test_ds.set_format("torch", columns=["input_ids", "attention_mask", "label"])
-        test_ds = test_ds.map(forward_pass, batched=True, batch_size=batch_size)
-
-        test_ds.set_format("pandas")
-        df_test = test_ds[:]
-
-        def pred_label(probs, threshold):
-            # probs is a list of probabilities for one row of the dataframe
-            probs = np.array(probs)
-            max_prob = np.max(probs)
-            predicted_class = np.argmax(probs)
-
-            if max_prob < threshold:
-                return unknown_label_int
-
-            return predicted_class
-
-        for threshold in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
-            print("-" * 60)
-            print(f"{threshold=}\n")
-            df_test[f"pred_label"] = df_test["probs"].apply(pred_label, args=(threshold,))
-            print(f"Coverage Rate:\n")
-            predictions_mapped = df_test[f"pred_label"].map({**id2label, unknown_label_int: unknown_label_str})
-            print("Raw counts:")
-            print(predictions_mapped.value_counts())
-            print("\nProportions:\n")
-            print(predictions_mapped.value_counts(normalize=True))
-            print(f"\nConditional metrics (classification report on predicted subset != {unknown_label_str})")
-            mask = df_test[f"pred_label"] != unknown_label_int
-            y = np.array([x for x in df_test[mask]["label"].values])
-            y_pred = np.array([x for x in df_test[mask][f"pred_label"].values])
-            report = classification_report(
-                y,
-                y_pred,
-                target_names=[k for k, v in sorted(label2id.items(), key=lambda item: item[1])],
-                digits=2,
-                zero_division=0,
-                output_dict=False,
-                labels=sorted(list(range(len(id2label)))),
-            )
-            print(report)
-            # --- Overall Accuracy (count "Unknown" as incorrect) ---
-            # If ground truth is never 'unknown_label_int', then any prediction of "Unknown" is automatically wrong.
-            overall_acc = (df_test["label"] == df_test[f"pred_label"]).mean()
-            print(f"Overall Accuracy (counting '{unknown_label_str}' as wrong): {overall_acc:.2%}")
-            print("-" * 60)
-
-        print("Probability Distribution Max Probability Across All Classes")
-        print(pd.DataFrame([max(x) for x in df_test["probs"]]).describe())
-        # Ensure wandb is finished
-        wandb.finish()
+        torch.cuda.synchronize()
+        started = time.perf_counter()
+        prediction = trainer.predict(tokenized, metric_key_prefix=split)
+        torch.cuda.synchronize()
+        elapsed = time.perf_counter() - started
+        probs = softmax(prediction.predictions.astype(np.float64), axis=-1)
+        np.savez_compressed(
+            run_dir / f"{split}_predictions.npz",
+            logits=prediction.predictions,
+            probabilities=probs,
+            labels=prediction.label_ids,
+            example_ids=np.asarray(raw["example_id"]),
+        )
+        report = classification_report(
+            prediction.label_ids,
+            probs.argmax(axis=1),
+            labels=list(range(probs.shape[1])),
+            target_names=[trainer.model.config.id2label[i] for i in range(probs.shape[1])],
+            output_dict=True,
+            zero_division=0,
+        )
+        write_json(run_dir / f"{split}_classification_report.json", report)
+        metrics = classification_metrics(probs, prediction.label_ids)
+        metrics.update(
+            evaluation_seconds=elapsed,
+            examples_per_second=len(raw) / elapsed,
+            # Batched throughput, NOT online single-request latency.
+            evaluation_batch_size=self.config.batch_size,
+        )
+        return metrics, probs
 
 
 @app.local_entrypoint()
-def main():
-    trainer = Trainer(reload_ds=True)
-
-    print(f"Training {run_name}")
-    trainer.train_model.remote()
-
-    # Will use most recent checkpoint by default. It may not be the "best" checkpoint/model.
-    # Write the full path to the checkpoint here if you want to evaluate a specific model.
-    # For example: check_point = '/data/run_name/checkpoint-1234/'
-    check_point = None
-    trainer.eval_model.remote(
-        check_point=check_point,
-        split=validation_split,
+def main(
+    smoke: bool = False,
+    model_size: str = "base",
+    epochs: int = 2,
+    learning_rate: float = 5e-5,
+    batch_size: int = 32,
+    max_length: int = 128,
+    seed: int = 42,
+    train_per_class: int = 0,
+    target_accuracy: float = 0.95,
+    gpu: str = "L4",
+):
+    config = Config(
+        model_size=model_size,
+        num_train_epochs=epochs,
+        learning_rate=learning_rate,
+        batch_size=batch_size,
+        max_length=max_length,
+        seed=seed,
+        train_per_class=train_per_class,
+        target_accuracy=target_accuracy,
+        smoke=smoke,
+    )
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    mode = "smoke" if smoke else "full"
+    run_name = f"banking77-{model_size}-{mode}-s{seed}-{stamp}-{uuid4().hex[:6]}"
+    package_dir = Path(__file__).parent
+    source = {
+        "git_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+        "git_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], text=True)),
+        "sha256": {
+            path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(package_dir.glob("*.py"))
+        },
+    }
+    print(f"Running {run_name} on {gpu}", flush=True)
+    summary = Trainer.with_options(gpu=gpu)().train_model.remote(asdict(config), run_name, source)
+    destination = package_dir / "results" / run_name
+    destination.mkdir(parents=True, exist_ok=False)
+    # Download reports; weights and full-precision predictions remain on the Volume.
+    for name in ("summary.json", "manifest.json", "training_log.json"):
+        with (destination / name).open("wb") as file:
+            for chunk in vol.read_file(f"runs/{run_name}/{name}"):
+                file.write(chunk)
+    print(json.dumps(summary, indent=2))
+    print(f"Local reports: {destination}")
+    print(
+        f"Artifacts: uv run modal volume get {VOLUME_NAME} runs/{run_name} ./artifacts/{run_name}"
     )
