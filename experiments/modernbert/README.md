@@ -4,6 +4,10 @@ Fine-tune the encoder on Modal, then evaluate the validation-selected checkpoint
 all 3,080 official test examples. This is a supervised specialist baseline for a
 later comparison with zero-shot Jev. No Jev scores are inferred from other people's runs.
 
+The first completed run reached **92.34% test accuracy / 92.31% macro-F1** with
+ModernBERT-base and the original two-epoch training recipe. See
+[the measured results](RESULTS.md) and [machine-readable report](reports/banking77-base-seed42.json).
+
 ## Original script and migration
 
 The first experiment commit, `ab60b5c`, imports `trainer.py` **unchanged** from
