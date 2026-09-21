@@ -3,7 +3,8 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 export MODAL_SANDBOX_V2=1  # SDK 1.5.5 compatibility.
-export RUN_REPO=DrChrisLevy/modal_demo RUN_REF=main RUN_DIRECTORY=example RUN_PORT=8000
+export RUN_REPO="${RUN_REPO:-DrChrisLevy/modal_demo}" RUN_REF="${RUN_REF:-main}"
+export RUN_DIRECTORY=example RUN_PORT=8000
 
 local_setup() {
   # A stable default keeps each worktree's containers and database separate.

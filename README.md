@@ -35,6 +35,7 @@ Start Docker, then run:
 ## Remote
 
 Remote runs clone the GitHub repository/ref configured at the top of `run`.
+Set `RUN_REPO` or `RUN_REF` to override those defaults.
 Push changes before starting a new VM.
 
 ```bash
@@ -53,6 +54,17 @@ running VM; use `down` then `up` to clone updated code.
 The remote shell starts in `/workspace/repo`, the same directory as the agent.
 Use `cd example && docker compose exec web bash` to enter the app container.
 Exiting either shell leaves the app running.
+
+## CI
+
+[The GitHub Actions workflow](.github/workflows/ci.yml) runs on pull requests to
+`main`. Add `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` as repository Actions secrets
+for a Modal workspace with VM Sandbox access.
+
+GitHub starts a Modal VM with the PR's merge commit, runs the same
+`./run test remote ci` integration tests and Ruff checks, and stops the VM even
+if startup or tests fail. The job uses GitHub's read-only token to clone the repo.
+Fork and Dependabot PRs are skipped because they cannot use these Actions secrets.
 
 ## Interactive Codex
 
