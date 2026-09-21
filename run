@@ -5,6 +5,28 @@ cd "$(dirname "$0")"
 export MODAL_SANDBOX_V2=1  # SDK 1.5.5 compatibility.
 export RUN_REPO=DrChrisLevy/modal_demo RUN_REF=main RUN_DIRECTORY=example RUN_PORT=8000
 
+local_setup() {
+  # A stable project name keeps each worktree's containers and database separate.
+  export COMPOSE_PROJECT_NAME="modal-demo-$(pwd -P | cksum | awk '{print $1}')"
+  cd "$RUN_DIRECTORY"
+}
+
+local_up() {
+  local address
+  address=$(docker compose port web 8000 2>/dev/null || true)
+  if [ -n "$address" ]; then
+    export APP_PORT="${address##*:}"
+  else
+    command -v lsof >/dev/null || { echo 'Local port selection requires lsof.' >&2; exit 1; }
+    export APP_PORT="$RUN_PORT"
+    while lsof -iTCP:"$APP_PORT" -sTCP:LISTEN -t >/dev/null 2>&1; do
+      APP_PORT=$((APP_PORT + 1))
+    done
+  fi
+  docker compose up --build --wait
+  echo "http://localhost:$APP_PORT"
+}
+
 tests='docker compose exec -T web uv run --frozen pytest -q && docker compose exec -T web uv run --frozen ruff check .'
 action="${1:-help}"
 target="${2:-local}"
@@ -15,7 +37,7 @@ case "$action" in
   shell)
     if [ "$#" -gt 2 ]; then echo 'Usage: ./run shell [name]' >&2; exit 2; fi
     if [ "$target" = local ]; then
-      cd "$RUN_DIRECTORY"
+      local_setup
       exec docker compose exec web bash
     fi
     export RUN_NAME="$target"
@@ -46,16 +68,16 @@ case "$action" in
         if [ "$action" != down ] || [ "$#" -ne 2 ]; then
           echo 'Usage: ./run down --volumes' >&2; exit 2
         fi
-        cd "$RUN_DIRECTORY"
+        local_setup
         exec docker compose down --volumes ;;
       remote)
         export RUN_NAME="${3:-app}"
         exec uv run --frozen python -m runner.remote "$action" "$tests" ;;
       local)
         if [ "$#" -gt 2 ]; then echo 'Names apply to remote environments.' >&2; exit 2; fi
-        cd "$RUN_DIRECTORY"
+        local_setup
         case "$action" in
-          up) docker compose up --build --wait; echo "http://localhost:$RUN_PORT" ;;
+          up) local_up ;;
           down) docker compose down ;;
           test) bash -c "$tests" ;;
         esac ;;

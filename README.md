@@ -25,7 +25,7 @@ OPENAI_API_KEY=your-openai-api-key-here
 Start Docker, then run:
 
 ```bash
-./run up              # build and serve at http://localhost:8000
+./run up              # build and print the local URL (first free port from 8000)
 ./run test            # run integration tests and lint
 ./run shell           # open a shell in the web container; exit to return
 ./run down            # stop containers; keep the database
