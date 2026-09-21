@@ -4,15 +4,21 @@ Run a Docker Compose app locally or in a Modal VM, then let Codex work on it.
 
 ## Setup
 
-Requires `uv`, Docker Compose, authenticated GitHub CLI (`gh auth login`),
+Requires `uv`, Docker Compose (local runs only), authenticated GitHub CLI (`gh auth login`),
 and a Modal account with VM Sandbox access.
+
+The Modal sandbox uses your local `gh` token with the same GitHub permissions.
 
 ```bash
 uv sync --frozen
 uv run modal setup  # skip if already authenticated
 ```
 
-For agents, create a Modal Secret named `openai-secret` containing `OPENAI_API_KEY`.
+For agents, set your key in the repo-root `.env` (gitignored):
+
+```dotenv
+OPENAI_API_KEY=your-openai-api-key-here
+```
 
 ## Local
 

@@ -248,7 +248,7 @@ def agent(vm, prompt):
         vm.run(
             "rm -f /artifacts/agent-summary.txt /artifacts/codex-events.jsonl; "
             "printenv OPENAI_API_KEY | codex login --with-api-key >/dev/null",
-            secrets=[modal.Secret.from_name("openai-secret", required_keys=["OPENAI_API_KEY"])],
+            secrets=[modal.Secret.from_dotenv()],
         )
         vm.run(
             "codex --sandbox danger-full-access --ask-for-approval never exec --json "
@@ -294,7 +294,7 @@ def main():
         if sys.argv[1] == "codex":
             vm.run(
                 "printenv OPENAI_API_KEY | codex login --with-api-key >/dev/null",
-                secrets=[modal.Secret.from_name("openai-secret", required_keys=["OPENAI_API_KEY"])],
+                secrets=[modal.Secret.from_dotenv()],
             )
             command = "codex"
             if "--resume" in sys.argv[2:]:
