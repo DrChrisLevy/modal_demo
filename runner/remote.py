@@ -43,6 +43,7 @@ class VM:
             BOOT,
             app=modal.App.lookup("modal-compose-demo", create_if_missing=True),
             image=image,
+            env={"COMPOSE_PROJECT_NAME": Path(DIRECTORY).name, "APP_PORT": str(PORT)},
             experimental_options={"vm_runtime": True},
             cpu=2,
             memory=4096,

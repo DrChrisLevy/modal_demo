@@ -6,23 +6,26 @@ export MODAL_SANDBOX_V2=1  # SDK 1.5.5 compatibility.
 export RUN_REPO=DrChrisLevy/modal_demo RUN_REF=main RUN_DIRECTORY=example RUN_PORT=8000
 
 local_setup() {
-  # A stable project name keeps each worktree's containers and database separate.
-  export COMPOSE_PROJECT_NAME="modal-demo-$(pwd -P | cksum | awk '{print $1}')"
+  # A stable default keeps each worktree's containers and database separate.
+  export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-modal-demo-$(pwd -P | cksum | awk '{print $1}')}"
   cd "$RUN_DIRECTORY"
 }
 
 local_up() {
   local address
-  address=$(docker compose port web 8000 2>/dev/null || true)
-  if [ -n "$address" ]; then
-    export APP_PORT="${address##*:}"
-  else
-    command -v lsof >/dev/null || { echo 'Local port selection requires lsof.' >&2; exit 1; }
-    export APP_PORT="$RUN_PORT"
-    while lsof -iTCP:"$APP_PORT" -sTCP:LISTEN -t >/dev/null 2>&1; do
-      APP_PORT=$((APP_PORT + 1))
-    done
+  if [ -z "${APP_PORT:-}" ]; then
+    address=$(docker compose port web 8000 2>/dev/null || true)
+    if [ -n "$address" ]; then
+      APP_PORT="${address##*:}"
+    else
+      command -v lsof >/dev/null || { echo 'Local port selection requires lsof.' >&2; exit 1; }
+      APP_PORT="$RUN_PORT"
+      while lsof -iTCP:"$APP_PORT" -sTCP:LISTEN -t >/dev/null 2>&1; do
+        APP_PORT=$((APP_PORT + 1))
+      done
+    fi
   fi
+  export APP_PORT
   docker compose up --build --wait
   echo "http://localhost:$APP_PORT"
 }
