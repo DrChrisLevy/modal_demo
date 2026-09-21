@@ -95,7 +95,7 @@ image = (
         "scikit-learn==1.9.1",
         "numpy==2.5.3",
     )
-    .env({"HF_HOME": "/data/huggingface", "TOKENIZERS_PARALLELISM": "false"})
+    .env({"HF_HOME": "/data/huggingface"})
 )
 vol = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
 
