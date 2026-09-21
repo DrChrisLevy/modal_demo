@@ -62,7 +62,7 @@ CHECKPOINTS = {
     "base": ("answerdotai/ModernBERT-base", "8949b909ec900327062f0ebf497f51aef5e6f0c8"),
     "large": ("answerdotai/ModernBERT-large", "45bb4654a4d5aaff24dd11d4781fa46d39bf8c13"),
 }
-VOLUME_NAME = "modernbert-banking77"
+VOLUME_NAME = "modern_bert_runs"
 DATA_ROOT = Path("/data")
 LOCAL_RESULTS_DIR = Path.home() / ".cache" / "modernbert" / "runs"
 GPU = "L4"
