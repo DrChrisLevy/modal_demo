@@ -1,8 +1,15 @@
 """Checks for data leakage and confidence metrics; no GPU or API credentials needed."""
 
 import unittest
+from dataclasses import replace
 
-from experiments.modernbert.data import clean_training_rows
+from datasets import ClassLabel, Dataset, DatasetDict
+
+from experiments.modernbert.data import (
+    DatasetConfig,
+    clean_training_rows,
+    prepare_classification_dataset,
+)
 from experiments.modernbert.evaluation import (
     classification_metrics,
     select_threshold,
@@ -23,7 +30,7 @@ class DataTests(unittest.TestCase):
         cleaned, audit = clean_training_rows(train, test)
         self.assertEqual([row["label"] for row in cleaned], [0, 2])
         self.assertEqual(audit["removed_training_duplicates"], 1)
-        self.assertEqual(audit["removed_test_text_overlap"], 1)
+        self.assertEqual(audit["removed_holdout_text_overlap"], 1)
         self.assertEqual(test, [{"text": "cancel MY transfer"}])
 
     def test_conflicting_training_labels_fail(self):
@@ -31,6 +38,95 @@ class DataTests(unittest.TestCase):
             clean_training_rows(
                 [{"text": "refund", "label": 0}, {"text": "REFUND", "label": 1}], []
             )
+
+
+class DatasetConfigurationTests(unittest.TestCase):
+    def setUp(self):
+        self.config = DatasetConfig(
+            name="unused-in-memory-fixture",
+            input_column="message",
+            label_column="intent",
+            train_split="training",
+            validation_split="dev",
+            test_split="heldout",
+        )
+        self.raw = DatasetDict(
+            {
+                split: Dataset.from_dict(
+                    {
+                        "message": [f"{split} message {i}" for i in range(size)],
+                        "intent": [i % 2 for i in range(size)],
+                        "unused_metadata": ["must not reach the model"] * size,
+                    }
+                ).cast_column("intent", ClassLabel(names=["zebra", "ant"]))
+                for split, size in (("training", 40), ("dev", 6), ("heldout", 8))
+            }
+        )
+
+    def test_custom_columns_splits_and_classlabel_order(self):
+        ds, labels, audit = prepare_classification_dataset(self.raw, self.config)
+        # ClassLabel IDs retain their meaning; alphabetically sorting names would corrupt labels.
+        self.assertEqual(labels, ["zebra", "ant"])
+        self.assertEqual(ds["train"].column_names, ["text", "label", "example_id"])
+        self.assertEqual(ds["train"].features["label"].dtype, "int64")
+        self.assertEqual(ds["validation"]["label"], [0, 1, 0, 1, 0, 1])
+        self.assertEqual(ds["validation"]["example_id"], [f"dev-{i}" for i in range(6)])
+        self.assertIsNone(audit["validation_fraction"])
+
+    def test_string_labels_and_unknown_holdout_class(self):
+        raw = DatasetDict(
+            {
+                split: data.remove_columns("intent").add_column(
+                    "intent", ["zebra" if i % 2 == 0 else "ant" for i in range(len(data))]
+                )
+                for split, data in self.raw.items()
+            }
+        )
+        ds, labels, _ = prepare_classification_dataset(raw, self.config)
+        self.assertEqual(labels, ["ant", "zebra"])
+        self.assertEqual(ds["train"]["label"][:4], [1, 0, 1, 0])
+        configured = replace(self.config, id2label={0: "zebra", 1: "ant"})
+        ds, labels, _ = prepare_classification_dataset(raw, configured)
+        self.assertEqual(labels, ["zebra", "ant"])
+        self.assertEqual(ds["train"]["label"][:4], [0, 1, 0, 1])
+        raw["heldout"] = (
+            raw["heldout"].remove_columns("intent").add_column("intent", ["never-in-training"] * 8)
+        )
+        with self.assertRaisesRegex(ValueError, "unknown class"):
+            prepare_classification_dataset(raw, self.config)
+
+    def test_generated_validation_is_fixed_before_few_shot_selection(self):
+        config = replace(self.config, validation_split=None)
+        full, labels, _ = prepare_classification_dataset(self.raw, config, validation_fraction=0.2)
+        few, _, _ = prepare_classification_dataset(
+            self.raw, config, validation_fraction=0.2, train_per_class=3
+        )
+        self.assertEqual(len(few["train"]), 3 * len(labels))
+        for split in ("validation", "test"):
+            self.assertEqual(list(full[split]["example_id"]), list(few[split]["example_id"]))
+        self.assertFalse(set(full["train"]["example_id"]) & set(full["validation"]["example_id"]))
+
+    def test_float_multilabel_missing_and_out_of_range_targets_fail(self):
+        for invalid in (0.0, [0, 1], None, -1, 2):
+            with self.subTest(target=invalid):
+                raw = DatasetDict(self.raw)
+                raw["heldout"] = (
+                    raw["heldout"].remove_columns("intent").add_column("intent", [invalid] * 8)
+                )
+                with self.assertRaisesRegex(ValueError, "target must|outside"):
+                    prepare_classification_dataset(raw, self.config)
+
+    def test_inconsistent_classlabel_order_fails(self):
+        raw = DatasetDict(self.raw)
+        raw["heldout"] = raw["heldout"].cast_column("intent", ClassLabel(names=["ant", "zebra"]))
+        with self.assertRaisesRegex(ValueError, "ClassLabel ordering differs"):
+            prepare_classification_dataset(raw, self.config)
+
+    def test_missing_columns_and_reused_splits_fail_early(self):
+        with self.assertRaisesRegex(ValueError, "missing configured columns"):
+            prepare_classification_dataset(self.raw, replace(self.config, label_column="wrong"))
+        with self.assertRaisesRegex(ValueError, "distinct source splits"):
+            prepare_classification_dataset(self.raw, replace(self.config, test_split="training"))
 
 
 class MetricTests(unittest.TestCase):

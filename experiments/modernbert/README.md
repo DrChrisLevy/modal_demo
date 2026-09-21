@@ -1,8 +1,12 @@
-# ModernBERT on Banking77
+# Configurable ModernBERT classification on Modal
 
-Fine-tune the encoder on Modal, then evaluate the validation-selected checkpoint on
-all 3,080 official test examples. This is a supervised specialist baseline for a
-later comparison with zero-shot Jev. No Jev scores are inferred from other people's runs.
+Configure the dataset, source columns, splits, labels, model and training parameters
+in the **SETUP** block at the top of `trainer.py`. The training and evaluation code
+below that block is dataset-independent. Banking77 is the default experiment;
+the original `dair-ai/emotion` task is included as a second configuration.
+
+The Banking77 experiment evaluates the validation-selected checkpoint on all 3,080
+official test examples, for a later comparison with zero-shot Jev.
 
 The first completed run reached **92.34% test accuracy / 92.31% macro-F1** with
 ModernBERT-base and the original two-epoch training recipe. See
@@ -31,8 +35,9 @@ git diff ab60b5c -- experiments/modernbert/trainer.py
 | `transformers.utils.move_cache()` | Removed | Obsolete cache migration; `HF_HOME` points at the persistent Volume. |
 | `Trainer(tokenizer=...)` | `Trainer(processing_class=...)` | Current Transformers API. |
 | W&B key required at import and baked into image command | JSON reports without W&B | Works with only Modal credentials; no API key in image layers. |
-| Emotion's supplied validation split | Stratified validation from Banking77 training | Banking77 only ships train/test. |
-| HF Python dataset loader | Original CSVs at a pinned upstream commit | Current Datasets no longer executes dataset loading scripts. |
+| Dataset globals | Top-level `DATASETS`, optional `DATA_PREPARATION`, and training `Config` | Keep dataset selection and schema out of training code. |
+| Emotion's supplied validation split | Preserve configured validation, or create it when `validation_split=None` | Banking77 needs a holdout; emotion keeps its supplied split. |
+| HF Python dataset loader | Generic `load_dataset`; Banking77 config points at original versioned CSVs | Current Datasets no longer executes dataset loading scripts. |
 | Padding in dataset mapping | Dynamic padding in `DataCollatorWithPadding` | Padding now follows actual training batches. |
 | Select last checkpoint for evaluation | Save/evaluate weights selected by validation macro-F1 | The last checkpoint need not be the best. |
 | Probabilities rounded to two decimals | Full-precision probabilities and logits | Rounding breaks calibration and threshold analysis. |
@@ -43,6 +48,61 @@ Primary docs: [Modal index](https://modal.com/llms.txt),
 [Volumes](https://modal.com/docs/guide/volumes),
 [HF Trainer](https://huggingface.co/docs/transformers/v5.17.0/en/main_classes/trainer),
 [ModernBERT](https://huggingface.co/docs/transformers/v5.17.0/en/model_doc/modernbert).
+
+## Dataset configuration
+
+Select a configured dataset with `--dataset emotion` or change `Config.dataset` at
+the top. To add a dataset, add a `DatasetConfig` entry to `DATASETS` in that same
+setup block. For example:
+
+```python
+"my_dataset": DatasetConfig(
+    name="your-org/your-dataset",  # Or "csv" / "parquet" with data_files URLs.
+    name_config=None,
+    revision="your-pinned-revision",
+    input_column="message",
+    label_column="intent",
+    train_split="training",
+    validation_split="dev",  # None reserves a stratified fraction of training.
+    test_split="heldout",
+    id2label={0: "negative", 1: "positive"},
+),
+```
+
+`id2label=None` uses the source `ClassLabel` order, or infers a vocabulary from
+training targets only. String classes are sorted; plain integer IDs must be
+consecutive from zero. Explicit `id2label` controls the meanings of integer IDs
+and the order of string class names. Validation/test classes must be in that vocabulary.
+All three evaluation roles need labeled examples. Supplied validation/test rows
+retain their order and are never subsampled except in smoke mode.
+
+`DATA_PREPARATION` selects optional training-row preparation functions. Banking77
+opts into duplicate/holdout-overlap removal; emotion does not. Hooks receive only
+held-out text, never held-out targets. Few-shot training selection happens after
+validation is fixed. No dataset-specific branch exists in the trainer or loader.
+
+## Classification columns and loss
+
+The loader normalizes configured source columns to `text`, integer `label`, and
+`example_id`. Tokenization removes **all** raw columns and returns only tokenizer
+inputs plus `labels`. IDs and source text remain available in the separate raw
+dataset for reports, but are never forwarded to the model.
+
+```text
+Configured message/intent columns
+  -> text + integer label + example_id
+  -> input_ids + attention_mask + labels
+  -> dynamic padding: labels int64 [batch], logits [batch, number_of_classes]
+  -> single-label cross-entropy
+```
+
+The model explicitly sets `problem_type="single_label_classification"`, including
+binary tasks with two logits. Before training, a real collated batch is forwarded
+through the model and its finite scalar loss is checked against PyTorch
+`cross_entropy(logits, labels)`. Batch columns, shapes, dtype, and loss are saved in
+`manifest.json` under `classification_batch`. Float targets, multi-label arrays,
+missing labels and out-of-range IDs fail clearly. This trainer handles binary and
+multiclass **single-label** tasks; it does not silently select regression or BCE.
 
 ## Run
 
@@ -56,6 +116,10 @@ uv run modal run -m experiments.modernbert.trainer --smoke
 
 # Full baseline: ModernBERT-base, two epochs, seed 42, one L4 GPU.
 uv run modal run -m experiments.modernbert.trainer
+
+# Original emotion task, using exactly the same trainer.
+uv run modal run -m experiments.modernbert.trainer --dataset emotion --smoke
+uv run modal run -m experiments.modernbert.trainer --dataset emotion
 
 # Learning curve: select training examples per class AFTER creating validation.
 uv run modal run -m experiments.modernbert.trainer --train-per-class 10
@@ -72,7 +136,7 @@ are retained. Maximum length is 128 rather than 512 because these are short quer
 override it with `--max-length`. All encoder weights are trained. There is no LoRA or
 frozen-encoder shortcut. The remote method has a 30-minute timeout.
 
-## Data and evaluation protocol
+## Banking77 data and evaluation protocol
 
 - Source: [PolyAI Banking77](https://github.com/PolyAI-LDN/task-specific-datasets/tree/9d081458ff52e53cf7e848f414e6e9344e4e6696/banking_data),
   77 labels, 10,003 original training rows and 3,080 test rows (CC BY 4.0).
@@ -96,7 +160,9 @@ frozen-encoder shortcut. The remote method has a 30-minute timeout.
 
 ## Artifacts
 
-The dedicated Modal Volume is `modernbert-banking77`; each run lives under `runs/<run>`.
+The Modal Volume retains its original name, `modernbert-banking77`, so existing
+weights and caches remain available. Its name is configured at the top and it can
+hold runs from any dataset. Each run lives under `runs/<dataset>-<run-details>`.
 The entrypoint downloads `summary.json`, `manifest.json`, and `training_log.json` to
 `experiments/modernbert/results/<run>/` (gitignored). The manifest records the config,
 dependency versions, GPU, dataset/model revisions, source hashes, label order and
@@ -117,10 +183,11 @@ uv run modal volume get modernbert-banking77 runs/<run> ./artifacts/<run>
 ```bash
 uv run ruff check experiments
 uv run ruff format --check experiments
-uv run --with numpy==2.5.3 --with scikit-learn==1.9.1 \
+uv run --with datasets==5.0.1 --with numpy==2.5.3 --with scikit-learn==1.9.1 \
   python -m unittest discover -s experiments/modernbert/tests -v
 ```
 
-The tests check leakage cleanup, calibration arithmetic, confidence ties and
-validation/test separation. The Modal smoke run checks the actual GPU training,
-checkpoint reload, evaluation, persistence and local report-download path.
+The tests check custom columns and splits, label order, invalid targets, leakage
+cleanup, calibration arithmetic, confidence ties and validation/test separation.
+Run both dataset smoke commands to check actual GPU batches/loss, training,
+checkpoint reload, evaluation, persistence and local report downloads.

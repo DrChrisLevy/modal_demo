@@ -16,7 +16,11 @@ from uuid import uuid4
 
 import modal
 
-from experiments.modernbert.data import DATA_REVISION, prepare_banking77
+from experiments.modernbert.data import (
+    DatasetConfig,
+    clean_training_rows,
+    load_classification_dataset,
+)
 from experiments.modernbert.evaluation import (
     classification_metrics,
     select_threshold,
@@ -24,16 +28,50 @@ from experiments.modernbert.evaluation import (
 )
 
 # ---------------------------------- SETUP BEGIN ----------------------------------#
+# Add or edit datasets here; the training/evaluation code below is dataset-independent.
+BANKING_REVISION = "9d081458ff52e53cf7e848f414e6e9344e4e6696"
+BANKING_URL = (
+    "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/"
+    f"{BANKING_REVISION}/banking_data"
+)
+DATASETS = {
+    "banking77": DatasetConfig(
+        name="csv",  # The original HF Python loading script is no longer supported.
+        data_files={"train": f"{BANKING_URL}/train.csv", "test": f"{BANKING_URL}/test.csv"},
+        input_column="text",
+        label_column="category",
+        train_split="train",
+        validation_split=None,  # Create validation from training.
+        test_split="test",
+        id2label=None,  # Infer the sorted string categories from training only.
+    ),
+    "emotion": DatasetConfig(
+        name="dair-ai/emotion",
+        name_config="split",
+        revision="cab853a1dbdf4c42c2b3ef2173804746df8825fe",
+        input_column="text",
+        label_column="label",
+        train_split="train",
+        validation_split="validation",  # Preserve the supplied validation split.
+        test_split="test",
+        id2label={0: "sadness", 1: "joy", 2: "love", 3: "anger", 4: "fear", 5: "surprise"},
+    ),
+}
+# Optional hooks receive normalized training rows and held-out text, never held-out labels.
+# Unlisted datasets use their supplied rows unchanged.
+DATA_PREPARATION = {"banking77": clean_training_rows}
 CHECKPOINTS = {
     "base": ("answerdotai/ModernBERT-base", "8949b909ec900327062f0ebf497f51aef5e6f0c8"),
     "large": ("answerdotai/ModernBERT-large", "45bb4654a4d5aaff24dd11d4781fa46d39bf8c13"),
 }
 VOLUME_NAME = "modernbert-banking77"
 DATA_ROOT = Path("/data")
+GPU = "L4"
 
 
 @dataclass(frozen=True)
 class Config:
+    dataset: str = "banking77"  # Change this default or pass --dataset.
     model_size: str = "base"
     batch_size: int = 32
     num_train_epochs: int = 2
@@ -46,8 +84,10 @@ class Config:
     smoke: bool = False
 
     def __post_init__(self):
+        if self.dataset not in DATASETS:
+            raise ValueError(f"dataset must be one of {list(DATASETS)}")
         if self.model_size not in CHECKPOINTS:
-            raise ValueError("model_size must be base or large")
+            raise ValueError(f"model_size must be one of {list(CHECKPOINTS)}")
         if self.batch_size < 1 or self.num_train_epochs < 1 or self.learning_rate <= 0:
             raise ValueError("batch size, epochs and learning rate must be positive")
         if not 1 <= self.max_length <= 8192:
@@ -59,7 +99,7 @@ class Config:
 
 
 # ---------------------------------- SETUP END ----------------------------------#
-app = modal.App("modernbert-banking77")
+app = modal.App("modernbert-classifier")
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .uv_pip_install(
@@ -82,13 +122,51 @@ def write_json(path, value):
 
 def tokenizer_function_logic(examples, tokenizer, max_length):
     # A standalone function makes Dataset.map caching independent of the Modal class.
-    return tokenizer(examples["text"], truncation=True, max_length=max_length)
+    encoded = tokenizer(examples["text"], truncation=True, max_length=max_length)
+    encoded["labels"] = examples["label"]  # One integer class ID per sequence.
+    return encoded
+
+
+def check_classification_batch(model, collator, tokenized):
+    """Check the actual model inputs and cross-entropy loss before training."""
+    import torch
+    from torch.nn.functional import cross_entropy
+
+    batch = collator([tokenized[i] for i in range(min(4, len(tokenized)))])
+    if set(batch) - {"labels", *collator.tokenizer.model_input_names}:
+        raise ValueError(f"Unexpected model input columns: {list(batch)}")
+    labels = batch["labels"]
+    if labels.dtype != torch.long or labels.ndim != 1:
+        raise ValueError("Classification labels must be int64 with shape [batch_size]")
+    if not ((labels >= 0) & (labels < model.config.num_labels)).all():
+        raise ValueError("Classification label is outside the model's class vocabulary")
+    was_training = model.training
+    model.eval()
+    try:
+        with torch.no_grad():
+            output = model(**{key: value.to(model.device) for key, value in batch.items()})
+        if output.logits.shape != (len(labels), model.config.num_labels):
+            raise ValueError("Classifier logits must have shape [batch_size, num_labels]")
+        if output.loss is None or output.loss.ndim != 0 or not torch.isfinite(output.loss):
+            raise ValueError("Classifier must return a finite scalar loss")
+        expected = cross_entropy(output.logits.float(), labels.to(model.device))
+        torch.testing.assert_close(output.loss.float(), expected, atol=1e-5, rtol=1e-5)
+        return {
+            "columns": sorted(batch),
+            "labels_dtype": str(labels.dtype),
+            "labels_shape": list(labels.shape),
+            "logits_shape": list(output.logits.shape),
+            "problem_type": model.config.problem_type,
+            "cross_entropy": output.loss.item(),
+        }
+    finally:
+        model.train(was_training)
 
 
 @app.cls(
     image=image,
     volumes={str(DATA_ROOT): vol},
-    gpu="L4",
+    gpu=GPU,
     cpu=4,
     memory=16384,
     timeout=60 * 30,
@@ -136,11 +214,14 @@ class Trainer:
         try:
             set_seed(self.config.seed)  # Before initializing the classification head.
             checkpoint, revision = CHECKPOINTS[self.config.model_size]
-            ds, labels, data_audit = prepare_banking77(
+            dataset_config = DATASETS[self.config.dataset]
+            ds, labels, data_audit = load_classification_dataset(
+                dataset_config,
                 seed=self.config.seed,
                 validation_fraction=self.config.validation_fraction,
                 train_per_class=self.config.train_per_class,
                 smoke=self.config.smoke,
+                prepare_train=DATA_PREPARATION.get(self.config.dataset),
             )
             id2label = dict(enumerate(labels))
             label2id = {v: k for k, v in id2label.items()}
@@ -149,13 +230,14 @@ class Trainer:
                 tokenizer_function_logic,
                 fn_kwargs={"tokenizer": self.tokenizer, "max_length": self.config.max_length},
                 batched=True,
-                remove_columns=["text", "example_id"],
+                remove_columns=ds["train"].column_names,
                 desc="Tokenizing",
             )
             configuration = AutoConfig.from_pretrained(checkpoint, revision=revision)
             configuration.id2label = id2label
             configuration.label2id = label2id
             configuration.num_labels = len(labels)
+            configuration.problem_type = "single_label_classification"
             # Native PyTorch SDPA avoids compiling an external flash-attn package.
             model = AutoModelForSequenceClassification.from_pretrained(
                 checkpoint, revision=revision, config=configuration, attn_implementation="sdpa"
@@ -197,8 +279,11 @@ class Trainer:
                 "config": config,
                 "source": source,
                 "model": {"name": checkpoint, "revision": revision},
-                "dataset": {"revision": DATA_REVISION, **data_audit},
+                "dataset": {"loader": asdict(dataset_config), **data_audit},
                 "labels": labels,
+                "classification_batch": check_classification_batch(
+                    trainer.model, trainer.data_collator, tokenized["train"]
+                ),
                 "split_ids": {split: list(ds[split]["example_id"]) for split in ds},
                 "packages": {
                     package: importlib.metadata.version(package)
@@ -307,18 +392,20 @@ class Trainer:
 
 @app.local_entrypoint()
 def main(
-    smoke: bool = False,
-    model_size: str = "base",
-    epochs: int = 2,
-    learning_rate: float = 5e-5,
-    batch_size: int = 32,
-    max_length: int = 128,
-    seed: int = 42,
-    train_per_class: int = 0,
-    target_accuracy: float = 0.95,
-    gpu: str = "L4",
+    dataset: str = Config.dataset,
+    smoke: bool = Config.smoke,
+    model_size: str = Config.model_size,
+    epochs: int = Config.num_train_epochs,
+    learning_rate: float = Config.learning_rate,
+    batch_size: int = Config.batch_size,
+    max_length: int = Config.max_length,
+    seed: int = Config.seed,
+    train_per_class: int = Config.train_per_class,
+    target_accuracy: float = Config.target_accuracy,
+    gpu: str = GPU,
 ):
     config = Config(
+        dataset=dataset,
         model_size=model_size,
         num_train_epochs=epochs,
         learning_rate=learning_rate,
@@ -331,7 +418,8 @@ def main(
     )
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     mode = "smoke" if smoke else "full"
-    run_name = f"banking77-{model_size}-{mode}-s{seed}-{stamp}-{uuid4().hex[:6]}"
+    dataset_slug = re.sub(r"[^A-Za-z0-9_-]+", "-", dataset)
+    run_name = f"{dataset_slug}-{model_size}-{mode}-s{seed}-{stamp}-{uuid4().hex[:6]}"
     package_dir = Path(__file__).parent
     source = {
         "git_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
