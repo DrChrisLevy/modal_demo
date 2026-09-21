@@ -1,5 +1,8 @@
 """Fine-tune ModernBERT on Modal; adapted from Chris Levy's December 2024 trainer.
 
+Original blog post:
+https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodern_bert%2Fmodern_bert.ipynb
+
 Run from the repository root:
     uv run modal run -m experiments.modernbert.trainer --smoke
     uv run modal run -m experiments.modernbert.trainer
