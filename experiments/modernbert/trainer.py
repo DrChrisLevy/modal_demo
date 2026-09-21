@@ -64,8 +64,8 @@ DATASETS = {
         id2label={0: "sadness", 1: "joy", 2: "love", 3: "anger", 4: "fear", 5: "surprise"},
     ),
 }
-# Optional hooks receive normalized training rows and held-out text, never held-out labels.
-# Unlisted datasets use their supplied rows unchanged.
+# Clean Banking77 before splitting off validation: remove duplicate training texts
+# and training texts that also appear in the test set.
 DATA_PREPARATION = {"banking77": clean_training_rows}
 CHECKPOINTS = {
     "base": ("answerdotai/ModernBERT-base", "8949b909ec900327062f0ebf497f51aef5e6f0c8"),
