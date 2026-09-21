@@ -60,6 +60,7 @@ Exiting either shell leaves the app running.
 [The GitHub Actions workflow](.github/workflows/ci.yml) runs on pull requests to
 `main`. Add `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` as repository Actions secrets
 for a Modal workspace with VM Sandbox access.
+CI does not require an `OPENAI_API_KEY`.
 
 GitHub starts a Modal VM with the PR's merge commit, runs the same
 `./run test remote ci` integration tests and Ruff checks, and stops the VM even
