@@ -1,12 +1,18 @@
-# Modal Compose Runner
+# Modal Compose Demo
 
-Run a Docker Compose app locally or in a Modal VM, then let Codex work on it.
+A small demo of using [Modal VM Sandboxes](https://modal.com/docs/guide/vm-sandboxes)
+to run Docker Compose apps, execute
+tests, and give coding agents isolated development environments.
 
-## Setup
+The app in [`example/`](example/) is a toy example. Use the demo as a starting point
+for building workflows around your own applications, tools, and pipelines.
 
-Requires `uv`, Docker Compose (local runs only), authenticated GitHub CLI (`gh auth login`),
-and a Modal account with VM Sandbox access.
+## Set up for Modal
 
+Requires `uv`, authenticated GitHub CLI (`gh auth login`),
+a [Modal account](https://modal.com/signup), and an OpenAI API key.
+
+Docker runs inside the Modal VM; no local Docker installation is needed.
 The Modal sandbox uses your local `gh` token with the same GitHub permissions.
 
 ```bash
@@ -14,28 +20,19 @@ uv sync --frozen
 uv run modal setup  # skip if already authenticated
 ```
 
-For agents, set your key in the repo-root `.env` (gitignored):
+Add your OpenAI API key to a `.env` file in the repo root:
 
 ```dotenv
 OPENAI_API_KEY=your-openai-api-key-here
 ```
 
-## Local
+## Run on Modal
 
-Start Docker, then run:
+New VMs clone `RUN_REPO` at `RUN_REF`, set at the top of `run`.
+Commit and push application changes before starting a new VM to include them.
 
-```bash
-./run up              # build and print the local URL (first free port from 8000)
-./run test            # run integration tests and lint
-./run shell           # open a shell in the web container; exit to return
-./run down            # stop containers; keep the database
-./run down --volumes  # stop containers and delete the database
-```
-
-## Remote
-
-Remote runs clone the GitHub repository/ref configured at the top of `run`.
-Push changes before starting a new VM.
+`demo` below is a name you choose for the remote environment. Replace it with
+your own name, such as `feature-a`, and use that name in subsequent commands.
 
 ```bash
 ./run up remote demo      # start a VM and print the app URL
@@ -56,9 +53,9 @@ Exiting either shell leaves the app running.
 
 ## Interactive Codex
 
+With `demo` running:
+
 ```bash
-./run codex                # start in the current checkout
-./run codex --resume       # resume here
 ./run codex demo           # connect to demo and start Codex
 ./run codex demo --resume  # connect to demo and pick a previous session
 ```
@@ -66,7 +63,8 @@ Exiting either shell leaves the app running.
 ## One-shot agents
 
 ```bash
-./run agent "Add task filtering and tests. Do not push."
+./run agent "Add task filtering and tests. Open a PR."
+./run agent "Change the UI to look like a 90s retro website. Open a PR."
 ```
 
 Creates a fresh VM, starts the app, runs Codex, saves results, and stops the VM.
@@ -82,5 +80,24 @@ a new conversation; named VMs retain files between calls.
   work. Remote databases are discarded when their VM stops.
 - The first remote run prepares Docker; subsequent VMs reuse the build cache
   for up to seven days.
+
+## Run locally (optional)
+
+Local runs require Docker Compose. With Docker running:
+
+```bash
+./run up              # build and print the local URL (first free port from 8000)
+./run test            # run integration tests and lint
+./run shell           # open a shell in the web container; exit to return
+./run down            # stop containers; keep the database
+./run down --volumes  # stop containers and delete the database
+```
+
+With the Codex CLI installed locally:
+
+```bash
+./run codex           # start in the current checkout
+./run codex --resume  # resume here
+```
 
 Use `./run --help` for the command summary.
