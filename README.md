@@ -102,4 +102,4 @@ With the Codex CLI installed locally:
 
 Use `./run --help` for the command summary.
 
-The [slides](slides/) accompany a small prepared talk.
+View the [presentation slides](https://drchrislevy.github.io/modal_demo/slides/#slide-1) in your browser.
