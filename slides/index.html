@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Docker Compose on Modal · Chris Levy</title>
+  <link rel="stylesheet" href="styles.css?v=6">
+  <script src="presentation.js" defer></script>
+</head>
+<body>
+  <main class="deck" aria-label="Docker Compose on Modal presentation">
+    <section class="slide title-slide" aria-labelledby="slide-1-title" aria-roledescription="slide">
+      <div class="title-content">
+        <h1 id="slide-1-title">
+          <span><em>Modal</em></span>
+        </h1>
+        <p class="subtitle">Development, tests, and coding agents in VM Sandboxes</p>
+      </div>
+
+      <footer class="slide-footer">
+        <p class="presenter"><a href="https://drchrislevy.com/">Chris Levy</a></p>
+      </footer>
+    </section>
+
+    <section class="slide intro-slide" aria-labelledby="slide-2-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-2-title"><a href="https://drchrislevy.com/about">Chris Levy</a></h2>
+      </header>
+      <img class="intro-photo" src="assets/modal-hat-chester.jpg" alt="Chris wearing a Modal hat beside the harbour in Chester, Nova Scotia" width="1200" height="890">
+      <ol class="post-stack" aria-label="Modal blog posts in chronological order">
+        <li style="--i: 0"><a class="post-card" href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Fintro_modal%2Fintro_modal.ipynb" target="_blank" rel="noopener noreferrer" aria-label="Open blog post in a new tab: Using Modal to Transcribe YouTube Videos with Whisper, April 15, 2024"><time datetime="2024-04-15">15 Apr 2024</time><img src="static/modal-posts/2024-04-15-whisper.webp" alt="Using Modal to Transcribe YouTube Videos with Whisper" decoding="async"></a></li>
+        <li style="--i: 1"><a class="post-card" href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodal_fun%2Fmodal_blog.ipynb" target="_blank" rel="noopener noreferrer" aria-label="Open blog post in a new tab: Building with Modal, September 13, 2024"><time datetime="2024-09-13">13 Sep 2024</time><img src="static/modal-posts/2024-09-13-building-with-modal.webp" alt="Building with Modal" decoding="async"></a></li>
+        <li style="--i: 2"><a class="post-card" href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Fcolpali%2Fcolpali_blog.ipynb" target="_blank" rel="noopener noreferrer" aria-label="Open blog post in a new tab: PDF Q&A App using ColPali, Modal, and FastHTML, October 30, 2024"><time datetime="2024-10-30">30 Oct 2024</time><img src="static/modal-posts/2024-10-30-colpali.webp" alt="PDF Q&A App using ColPali, Modal, and FastHTML" decoding="async"></a></li>
+        <li style="--i: 3"><a class="post-card" href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodern_bert%2Fmodern_bert.ipynb" target="_blank" rel="noopener noreferrer" aria-label="Open blog post in a new tab: Fine-Tuning ModernBERT For Classification Tasks on Modal, December 29, 2024"><time datetime="2024-12-29">29 Dec 2024</time><img src="static/modal-posts/2024-12-29-modernbert.webp" alt="Fine-Tuning ModernBERT For Classification Tasks on Modal" decoding="async"></a></li>
+        <li style="--i: 4"><a class="post-card" href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmcp2%2Fmcp2.ipynb" target="_blank" rel="noopener noreferrer" aria-label="Open blog post in a new tab: Deploying a Remote MCP Server to Modal, August 8, 2025"><time datetime="2025-08-08">08 Aug 2025</time><img src="static/modal-posts/2025-08-08-remote-mcp.webp" alt="Deploying a Remote MCP Server to Modal" decoding="async"></a></li>
+        <li style="--i: 5"><a class="post-card" href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Fqwen_image_edit%2Fqwen_image_edit.ipynb" target="_blank" rel="noopener noreferrer" aria-label="Open blog post in a new tab: Running Qwen Image Edit on Modal, August 19, 2025"><time datetime="2025-08-19">19 Aug 2025</time><img src="static/modal-posts/2025-08-19-qwen-image-edit.webp" alt="Running Qwen Image Edit on Modal" decoding="async"></a></li>
+        <li style="--i: 6"><a class="post-card" href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Ffast_agent_demo%2Ffast_agent_demo.md" target="_blank" rel="noopener noreferrer" aria-label="Open blog post in a new tab: A hackable ChatGPT-like code interpreter, February 3, 2026"><time datetime="2026-02-03">03 Feb 2026</time><img src="static/modal-posts/2026-02-03-code-interpreter.webp" alt="A hackable ChatGPT-like code interpreter" decoding="async"></a></li>
+        <li style="--i: 7"><a class="post-card" href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodal_asgi_openai%2Fmodal_openai.ipynb" target="_blank" rel="noopener noreferrer" aria-label="Open blog post in a new tab: FastAPI ASGI on Modal for OpenAI Throughput, February 16, 2026"><time datetime="2026-02-16">16 Feb 2026</time><img src="static/modal-posts/2026-02-16-openai-throughput.webp" alt="FastAPI ASGI on Modal for OpenAI Throughput" decoding="async"></a></li>
+        <li style="--i: 8"><a class="post-card" href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodal_native_test_stack%2Fmodal_native_test_stack.md" target="_blank" rel="noopener noreferrer" aria-label="Open blog post in a new tab: A POC: Using Modal for Backend Development, CI, and Coding Agents, August 29, 2026"><time datetime="2026-08-29">29 Aug 2026</time><img src="static/modal-posts/2026-08-29-backend-development.webp" alt="A POC: Using Modal for Backend Development, CI, and Coding Agents" decoding="async"></a></li>
+      </ol>
+      <footer class="intro-course">
+        <a href="https://www.udemy.com/course/ai-engineering-with-modal/" target="_blank" rel="noopener noreferrer">AI Engineering with Modal <span aria-hidden="true">↗</span></a>
+      </footer>
+      <!-- Dates and titles come from the supplied screenshots. See static/modal-posts/manifest.json. -->
+    </section>
+
+    <section class="slide code-slide overview-slide" aria-labelledby="slide-3-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-3-title">Modal is cool</h2>
+      </header>
+      <div class="code-layout">
+        <div>
+          <figure class="source-excerpt">
+            <pre><code class="language-python"><span class="py-keyword">import</span> modal
+
+app = modal.<span class="py-call">App</span>(<span class="py-string">&quot;basic-function&quot;</span>)
+
+@app.<span class="py-call">function</span>()
+<span class="py-keyword">def</span> <span class="py-call">f</span>(x: <span class="py-call">int</span>, exp: <span class="py-call">int</span>) -&gt; <span class="py-call">int</span>:
+    <span class="py-keyword">return</span> x**exp
+
+@app.<span class="py-call">local_entrypoint</span>()
+<span class="py-keyword">def</span> <span class="py-call">main</span>(exp: <span class="py-call">int</span> = <span class="py-number">2</span>):
+    <span class="py-keyword">for</span> res <span class="py-keyword">in</span> f.<span class="py-call">map</span>(<span class="py-call">range</span>(<span class="py-number">200</span>), [exp] * <span class="py-number">200</span>):
+        <span class="py-call">print</span>(res)</code></pre>
+          </figure>
+          <p class="overview-command"><code>uv run modal run slides/simple.py</code></p>
+        </div>
+      </div>
+      <footer class="code-footer">
+        <a href="https://modal.com/docs/guide/scale#parallel-execution-of-inputs" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
+      </footer>
+      <!-- Exact user-provided example, also saved as slides/simple.py. main() runs locally; f.map() submits 200 inputs to the remote function and yields ordered results. Modal autoscaling supplies capacity; this does not promise 200 simultaneous containers. Speaker transition: bring that familiar local workflow to development, tests, and coding agents in VM Sandboxes. -->
+    </section>
+
+    <section class="slide code-slide training-slide" aria-labelledby="slide-4-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-4-title">Modal is cool</h2>
+      </header>
+      <div class="code-layout">
+        <figure class="source-excerpt">
+          <pre><code class="language-python"><span class="py-keyword">import</span> modal
+
+app = modal.<span class="py-call">App</span>(<span class="py-string">&quot;modernbert-classifier&quot;</span>)
+image = (
+    modal.<span class="py-call">Image</span>.<span class="py-call">debian_slim</span>(<span class="py-parameter">python_version</span>=<span class="py-string">&quot;3.12&quot;</span>)
+    .<span class="py-call">uv_pip_install</span>(
+        <span class="py-string">&quot;torch==2.14.0&quot;</span>,
+        <span class="py-string">&quot;transformers==5.17.0&quot;</span>,
+        <span class="py-string">&quot;datasets==5.0.1&quot;</span>,
+        <span class="py-string">&quot;accelerate==1.15.0&quot;</span>,
+        <span class="py-string">&quot;scikit-learn==1.9.1&quot;</span>,
+        <span class="py-string">&quot;numpy==2.5.3&quot;</span>,
+    )
+    .<span class="py-call">env</span>({<span class="py-string">&quot;HF_HOME&quot;</span>: <span class="py-string">&quot;/data/huggingface&quot;</span>})
+)
+vol = modal.<span class="py-call">Volume</span>.<span class="py-call">from_name</span>(
+    <span class="py-constant">VOLUME_NAME</span>, <span class="py-parameter">create_if_missing</span>=<span class="py-keyword">True</span>
+)</code></pre>
+        </figure>
+        <figure class="source-excerpt">
+          <pre><code class="language-python">@app.<span class="py-call">function</span>(
+    <span class="py-parameter">image</span>=image,
+    <span class="py-parameter">volumes</span>={<span class="py-call">str</span>(<span class="py-constant">DATA_ROOT</span>): vol},
+    <span class="py-parameter">gpu</span>=<span class="py-constant">GPU</span>,
+    <span class="py-parameter">cpu</span>=<span class="py-constant">CPU</span>,
+    <span class="py-parameter">memory</span>=<span class="py-constant">MEMORY_MB</span>,
+    <span class="py-parameter">timeout</span>=<span class="py-constant">TIMEOUT</span>,
+)
+<span class="py-keyword">def</span> <span class="py-call">train_model</span>():
+    ...  <span class="py-comment"># do training</span>
+
+@app.<span class="py-call">local_entrypoint</span>()
+<span class="py-keyword">def</span> <span class="py-call">main</span>():
+    train_model.<span class="py-call">remote</span>()</code></pre>
+        </figure>
+      </div>
+      <p class="overview-command"><code>uv run modal run slides/trainer.py</code></p>
+      <!-- Adapted from slides/trainer.py. App, image dependencies, environment, Volume call and function decorator are source-faithful. As requested, configuration constants, training implementation and optional smoke-test parameter are omitted; the training body is represented by an ellipsis. Read left column first, then right. -->
+    </section>
+
+    <section class="slide sandbox-intro-slide" aria-labelledby="slide-5-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-5-title">Modal VM Sandboxes</h2>
+      </header>
+      <div class="sandbox-intro-content">
+        <p>Run a Sandbox on a full virtual machine with a real Linux kernel.</p>
+        <p>Docker workloads behave as they would on a normal Linux host.</p>
+        <p class="sandbox-intro-purpose">We’ll use this to run our local development environment in the cloud.</p>
+      </div>
+      <footer class="code-footer">
+        <a href="https://modal.com/docs/guide/vm-sandboxes#vm-sandboxes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
+      </footer>
+    </section>
+
+    <section class="slide screenshot-slide" aria-labelledby="slide-6-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-6-title">What we get to avoid</h2>
+      </header>
+      <figure class="screenshot-layout">
+        <img src="static/aws/aws1.png" width="3446" height="1176" alt="AWS EC2 launch form showing name and tags, operating system images, and an instance configuration summary.">
+      </figure>
+    </section>
+
+    <section class="slide screenshot-slide" aria-labelledby="slide-7-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-7-title">What we get to avoid</h2>
+      </header>
+      <figure class="screenshot-layout">
+        <img src="static/aws/aws2.png" width="3446" height="1636" alt="AWS EC2 network settings showing VPC, subnet, public IP, security groups, and inbound firewall rules.">
+      </figure>
+    </section>
+
+    <section class="slide local-slide" aria-labelledby="slide-8-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-8-title">Local development demo</h2>
+      </header>
+
+      <div class="local-workflow">
+        <div class="compose-workflow">
+          <h3>The local loop</h3>
+          <dl class="command-list">
+            <div><dt><code>./run up</code></dt><dd>Run the app</dd></div>
+            <div><dt><code>./run shell</code></dt><dd>Open a shell in the app container</dd></div>
+            <div><dt><code>./run test</code></dt><dd>Tests and lint</dd></div>
+            <div><dt><code>./run down</code></dt><dd>Stop the services</dd></div>
+            <div><dt><code>./run down --volumes</code></dt><dd>Stop services and delete volumes</dd></div>
+          </dl>
+          <p class="workflow-note"><code>./run</code> wraps Docker Compose.</p>
+        </div>
+      </div>
+
+      <!--
+        Speaker context: Local development already works well. Worktrees let us
+        work on several branches at once. The runner assigns a Compose project
+        name per checkout and chooses a free app port. The next step is to make
+        an environment available remotely for development, agents, and testing.
+        Source: ../run, local_setup() and local_up(); ../example/compose.yaml.
+      -->
+    </section>
+
+    <section class="slide cloud-slide" aria-labelledby="slide-9-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-9-title">Modal makes it easy</h2>
+      </header>
+
+      <div class="cloud-comparison">
+        <div class="local-environment">
+          <h3>Local machine</h3>
+          <div class="compose-box">
+            <p>Docker Compose</p>
+            <span>App + services</span>
+          </div>
+        </div>
+
+        <div class="cloud-arrow" aria-hidden="true">
+          <span>same stack</span>
+          <svg viewBox="0 0 160 32" fill="none">
+            <path d="M2 16H154M140 3L154 16L140 29" stroke="currentColor" stroke-width="2" />
+          </svg>
+        </div>
+
+        <div class="modal-environment">
+          <h3>Modal VM Sandbox</h3>
+          <div class="compose-box">
+            <p>Docker Compose</p>
+            <span>App + services</span>
+          </div>
+          <p class="cloud-tools">Shell · Tests · Coding agents</p>
+        </div>
+      </div>
+
+      <p class="cloud-command"><code>./run up remote demo</code></p>
+      <!--
+        The same Compose app runs inside a Modal VM Sandbox with a Docker engine.
+        "demo" is the remote environment name. A new VM clones the configured
+        GitHub repository/ref; commit and push local changes before creating it.
+        Shells, test runs, and agents can use that named environment.
+        Source: ../run; ../runner/remote.py, VM.create(), VM.checkout(), and up().
+      -->
+    </section>
+
+    <section class="slide remote-slide" aria-labelledby="slide-10-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-10-title">Remote development demo</h2>
+      </header>
+
+      <div class="remote-workflow">
+        <h3>The remote loop</h3>
+        <dl class="command-list">
+          <div><dt><code>./run up remote demo</code></dt><dd>Run the app in a VM</dd></div>
+          <div><dt><code>./run list</code></dt><dd>List remote environments</dd></div>
+          <div><dt><code>./run shell demo</code></dt><dd>Open a shell in the VM</dd></div>
+          <div><dt><code>./run codex demo</code></dt><dd>Start interactive Codex</dd></div>
+          <div><dt><code>./run codex demo --resume</code></dt><dd>Resume a Codex session</dd></div>
+          <div><dt><code>./run agent demo "Add filtering"</code></dt><dd>Run an agent task in the VM</dd></div>
+          <div><dt><code>./run test remote demo</code></dt><dd>Tests and lint</dd></div>
+          <div><dt><code>./run down remote demo</code></dt><dd>Save changes and stop the VM</dd></div>
+        </dl>
+        <p class="workflow-note"><code>demo</code> is the environment name. Each name has its own VM.</p>
+      </div>
+      <!--
+        Demo commands use the same named VM. The remote shell starts at the
+        repository root. Down exports patches and logs locally and destroys
+        the VM, including its database; there is no remote --volumes option.
+        Source: ../run; ../README.md, Run on Modal and Interactive Codex.
+      -->
+    </section>
+
+    <section class="slide code-slide vm-slide" aria-labelledby="slide-11-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-11-title">Create the VM</h2>
+      </header>
+      <div class="code-layout">
+        <figure class="source-excerpt">
+          <pre><code class="language-python">sandbox = modal.<span class="py-call">Sandbox</span>.<span class="py-call">create</span>(
+    <span class="py-string">&quot;bash&quot;</span>,
+    <span class="py-string">&quot;-c&quot;</span>,
+    <span class="py-constant">BOOT</span>,
+    <span class="py-parameter">app</span>=modal.<span class="py-call">App</span>.<span class="py-call">lookup</span>(<span class="py-string">&quot;modal-compose-demo&quot;</span>, <span class="py-parameter">create_if_missing</span>=<span class="py-keyword">True</span>),
+    <span class="py-parameter">image</span>=image,
+    <span class="py-parameter">env</span>={<span class="py-string">&quot;COMPOSE_PROJECT_NAME&quot;</span>: <span class="py-call">Path</span>(<span class="py-constant">DIRECTORY</span>).name, <span class="py-string">&quot;APP_PORT&quot;</span>: <span class="py-call">str</span>(<span class="py-constant">PORT</span>)},
+    <span class="py-parameter">experimental_options</span>={<span class="py-string">&quot;vm_runtime&quot;</span>: <span class="py-keyword">True</span>},
+    <span class="py-parameter">cpu</span>=<span class="py-number">2</span>,
+    <span class="py-parameter">memory</span>=<span class="py-number">4096</span>,
+    <span class="py-parameter">timeout</span>=<span class="py-number">1800</span>,
+    <span class="py-parameter">encrypted_ports</span>=[<span class="py-constant">PORT</span>],
+    <span class="py-parameter">secrets</span>=[modal.<span class="py-call">Secret</span>.<span class="py-call">from_dict</span>({<span class="py-string">&quot;GH_TOKEN&quot;</span>: token})],
+    <span class="py-parameter">readiness_probe</span>=modal.<span class="py-call">Probe</span>.<span class="py-call">with_exec</span>(<span class="py-string">&quot;docker&quot;</span>, <span class="py-string">&quot;info&quot;</span>, <span class="py-parameter">interval_ms</span>=<span class="py-number">500</span>),
+)</code></pre>
+        </figure>
+      </div>
+      <footer class="code-footer">
+        <a href="https://modal.com/docs/guide/vm-sandboxes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
+      </footer>
+      <!-- Source notes: Sandbox.create call from runner/remote.py, VM.create(), preserving all arguments and original line breaks. Surrounding method indentation is removed; token is obtained earlier with gh auth token. Python syntax spans are generated with the standard-library tokenizer. BOOT is defined in runner/image.py. -->
+    </section>
+
+    <section class="slide code-slide image-slide" aria-labelledby="slide-12-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-12-title">Build the image</h2>
+      </header>
+      <div class="code-layout">
+        <figure class="source-excerpt">
+          <pre><code class="language-python">plugin = <span class="py-string">&quot;/usr/local/lib/docker/cli-plugins/docker-compose&quot;</span>
+image = (
+    modal.<span class="py-call">Image</span>.<span class="py-call">debian_slim</span>(<span class="py-parameter">python_version</span>=<span class="py-string">&quot;3.12&quot;</span>)
+    .<span class="py-call">apt_install</span>(<span class="py-string">&quot;docker.io&quot;</span>, <span class="py-string">&quot;curl&quot;</span>, <span class="py-string">&quot;git&quot;</span>, <span class="py-string">&quot;gh&quot;</span>, <span class="py-string">&quot;ca-certificates&quot;</span>, <span class="py-string">&quot;ripgrep&quot;</span>)
+    .<span class="py-call">run_commands</span>(
+        <span class="py-string">&quot;mkdir -p /usr/local/lib/docker/cli-plugins /workspace /artifacts&quot;</span>,
+        <span class="py-string">f&quot;</span><span class="py-string">curl -fsSL https://github.com/docker/compose/releases/download/</span><span class="py-string">&quot;</span>
+        <span class="py-string">f&quot;</span>{<span class="py-constant">COMPOSE_VERSION</span>}<span class="py-string">/docker-compose-linux-x86_64 -o </span>{plugin}<span class="py-string">&quot;</span>,
+        <span class="py-string">f&quot;</span><span class="py-string">echo &#x27;</span>{<span class="py-constant">COMPOSE_SHA256</span>}<span class="py-string">  </span>{plugin}<span class="py-string">&#x27; | sha256sum -c -</span><span class="py-string">&quot;</span>,
+        <span class="py-string">f&quot;</span><span class="py-string">chmod +x </span>{plugin}<span class="py-string">&quot;</span>,
+        <span class="py-string">&quot;docker compose version&quot;</span>,
+    )
+    .<span class="py-call">env</span>({<span class="py-string">&quot;GH_PROMPT_DISABLED&quot;</span>: <span class="py-string">&quot;1&quot;</span>, <span class="py-string">&quot;COMPOSE_PARALLEL_LIMIT&quot;</span>: <span class="py-string">&quot;1&quot;</span>})
+    .<span class="py-call">workdir</span>(<span class="py-string">&quot;/workspace&quot;</span>)
+)</code></pre>
+        </figure>
+      </div>
+      <footer class="code-footer">
+        <a href="https://modal.com/docs/guide/images" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
+      </footer>
+      <!-- Source notes: The plugin and image assignments from tools_image() in runner/image.py. The return statement continues on the next slide. Statements and original line breaks are preserved. Only the function definition and outer indentation are omitted. Version and checksum constants are defined earlier in runner/image.py. -->
+    </section>
+
+    <section class="slide code-slide image-slide" aria-labelledby="slide-13-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-13-title">Build the image</h2>
+      </header>
+      <div class="code-layout">
+        <figure class="source-excerpt">
+          <pre><code class="language-python"><span class="py-keyword">return</span> image.<span class="py-call">run_commands</span>(
+    <span class="py-string">f&quot;</span><span class="py-string">curl -fsSL https://github.com/openai/codex/releases/download/</span><span class="py-string">&quot;</span>
+    <span class="py-string">f&quot;</span><span class="py-string">rust-v</span>{<span class="py-constant">CODEX_VERSION</span>}<span class="py-string">/codex-package-x86_64-unknown-linux-musl.tar.gz </span><span class="py-string">&quot;</span>
+    <span class="py-string">&quot;-o /tmp/codex.tar.gz&quot;</span>,
+    <span class="py-string">f&quot;</span><span class="py-string">echo &#x27;</span>{<span class="py-constant">CODEX_SHA256</span>}<span class="py-string">  /tmp/codex.tar.gz&#x27; | sha256sum -c -</span><span class="py-string">&quot;</span>,
+    <span class="py-string">&quot;tar -xzf /tmp/codex.tar.gz -C /usr/local &amp;&amp; rm /tmp/codex.tar.gz&quot;</span>,
+    <span class="py-string">&quot;codex --version&quot;</span>,
+)</code></pre>
+        </figure>
+      </div>
+      <footer class="code-footer">
+        <a href="https://modal.com/docs/guide/images" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
+      </footer>
+      <!-- Source notes: The return statement from tools_image() in runner/image.py. This continues the image definition from the previous slide. Statements and original line breaks are preserved. Only the function definition and outer indentation are omitted. Version and checksum constants are defined earlier in runner/image.py. -->
+    </section>
+
+    <section class="slide code-slide vm-slide" aria-labelledby="slide-14-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-14-title">Clone the repo and start the app</h2>
+      </header>
+      <div class="code-layout">
+        <figure class="source-excerpt">
+          <pre><code class="language-python"><span class="py-comment"># Simplified flow</span>
+sandbox.<span class="py-call">exec</span>(<span class="py-string">&quot;gh&quot;</span>, <span class="py-string">&quot;auth&quot;</span>, <span class="py-string">&quot;setup-git&quot;</span>, <span class="py-parameter">workdir</span>=<span class="py-string">&quot;/workspace&quot;</span>).<span class="py-call">wait</span>()
+sandbox.<span class="py-call">exec</span>(
+    <span class="py-string">&quot;git&quot;</span>, <span class="py-string">&quot;clone&quot;</span>, <span class="py-string">&quot;--&quot;</span>, <span class="py-string">f&quot;https://github.com/</span>{<span class="py-constant">REPO</span>}<span class="py-string">.git&quot;</span>, <span class="py-string">&quot;/workspace/repo&quot;</span>
+).<span class="py-call">wait</span>()
+
+sandbox.<span class="py-call">exec</span>(
+    <span class="py-string">&quot;bash&quot;</span>, <span class="py-string">&quot;-c&quot;</span>,
+    <span class="py-string">f&quot;git fetch origin </span>{shlex.<span class="py-call">quote</span>(<span class="py-constant">REF</span>)}<span class="py-string"> &amp;&amp; git checkout --detach FETCH_HEAD&quot;</span>,
+    <span class="py-parameter">workdir</span>=<span class="py-string">&quot;/workspace/repo&quot;</span>,
+).<span class="py-call">wait</span>()
+
+sandbox.<span class="py-call">exec</span>(
+    <span class="py-string">&quot;bash&quot;</span>, <span class="py-string">&quot;-c&quot;</span>, <span class="py-string">&quot;docker compose up --build --wait --wait-timeout 120&quot;</span>,
+    <span class="py-parameter">workdir</span>=<span class="py-string">f&quot;/workspace/repo/</span>{<span class="py-constant">DIRECTORY</span>}<span class="py-string">&quot;</span>, <span class="py-parameter">timeout</span>=<span class="py-number">900</span>,
+).<span class="py-call">wait</span>()</code></pre>
+        </figure>
+      </div>
+      <footer class="code-footer">
+        <a href="https://modal.com/docs/guide/sandbox-spawn#running-commands-in-sandboxes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
+      </footer>
+      <!-- Simplified teaching flow based on checkout() and up() in runner/remote.py:104–109 and 225. Calls the underlying Sandbox.exec() API directly in place of the project's VM.run() helper. Auth and clone use direct argument lists; fetch/checkout and Compose use bash. Each wait() keeps the steps sequential. Assumes the VM is ready and already has the GitHub token injected as in VM.create(). Output collection, exit-code checks, cancellation, Git identity/baseline tracking, and timeout arguments for Git commands are omitted. The real helper checks failures before proceeding. -->
+    </section>
+
+    <section class="slide code-slide vm-slide" aria-labelledby="slide-15-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-15-title">Reuse the Docker build cache</h2>
+      </header>
+      <div class="code-layout">
+        <figure class="source-excerpt">
+          <pre><code class="language-python"><span class="py-comment"># Pseudocode</span>
+<span class="py-keyword">if</span> cached <span class="py-keyword">and</span> cached[<span class="py-string">&quot;expires_at&quot;</span>] &gt; time.<span class="py-call">time</span>():
+    <span class="py-keyword">return</span> modal.<span class="py-call">Image</span>.<span class="py-call">from_id</span>(cached[<span class="py-string">&quot;image_id&quot;</span>])
+
+<span class="py-comment"># In a fresh VM, after cloning the repo</span>
+sandbox.<span class="py-call">exec</span>(
+    <span class="py-string">&quot;bash&quot;</span>, <span class="py-string">&quot;-c&quot;</span>, <span class="py-string">&quot;docker compose pull --ignore-buildable &amp;&amp; docker compose build&quot;</span>,
+    <span class="py-parameter">workdir</span>=<span class="py-string">f&quot;/workspace/repo/</span>{<span class="py-constant">DIRECTORY</span>}<span class="py-string">&quot;</span>,
+).<span class="py-call">wait</span>()
+
+<span class="py-comment"># Remove repo + Git credentials; stop Docker and sync</span>
+image = sandbox.<span class="py-call">snapshot_filesystem</span>(<span class="py-parameter">timeout</span>=<span class="py-number">180</span>, <span class="py-parameter">ttl</span>=<span class="py-number">7</span> * <span class="py-number">24</span> * <span class="py-number">3600</span>)
+<span class="py-comment"># Save image ID + expiry; stop the preparation VM</span>
+<span class="py-keyword">return</span> image</code></pre>
+        </figure>
+      </div>
+      <footer class="code-footer">
+        <a href="https://modal.com/docs/guide/sandbox-snapshots" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
+      </footer>
+      <!-- Pseudocode based on load_or_prepare_image() in runner/remote.py:189–211. cached stands for metadata loaded from PREPARED, or None if absent. VM creation and checkout are summarized in a comment; sandbox represents vm.sandbox. The exact pull/build command is passed directly to Sandbox.exec() in place of VM.run(). Its failure checks, logging, process management, timeout, and preparation lock are omitted. Before snapshotting, the real code removes /workspace/repo, /root/.config/gh, and /root/.gitconfig, sends TERM to Docker, waits for its PID file to disappear, and syncs. These steps are summarized in the comment and must not be skipped in the implementation. It saves the image ID and a seven-day expiry, then terminates the preparation VM in finally. This is a filesystem snapshot containing Docker image/build state, not a memory snapshot or saved live app. Fresh application VMs still clone the repo and run Compose. -->
+    </section>
+
+    <section class="slide takeaway-slide" aria-labelledby="slide-16-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-16-title">Same workflow.<br>More places to run it.</h2>
+      </header>
+      <div class="closing-content">
+        <p>Keep your existing Docker Compose setup.</p>
+        <p>Give each task its own cloud environment.</p>
+        <p>Let developers and agents use the same app and tests.</p>
+      </div>
+      <footer class="code-footer">
+        <a href="https://github.com/DrChrisLevy/modal_demo" target="_blank" rel="noopener noreferrer">github.com/DrChrisLevy/modal_demo ↗</a>
+      </footer>
+    </section>
+
+    <section class="slide resources-slide" aria-labelledby="slide-17-title" aria-roledescription="slide" hidden>
+      <header class="content-heading">
+        <h2 id="slide-17-title">Build it for your workflow</h2>
+      </header>
+      <div class="resources-content">
+        <p>Explore the docs: <a href="https://modal.com/docs" target="_blank" rel="noopener noreferrer">modal.com/docs ↗</a></p>
+        <p>Point your agents at <a href="https://modal.com/llms.txt" target="_blank" rel="noopener noreferrer">modal.com/llms.txt ↗</a></p>
+        <p class="resources-purpose">Use Modal’s primitives to build an environment that fits your situation.</p>
+        <div class="related-post">
+          <a href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodal_native_test_stack%2Fmodal_native_test_stack.md" target="_blank" rel="noopener noreferrer">Another approach: Sandboxes + Sidecars ↗</a>
+          <p>A larger app using gVisor Sandboxes with PostgreSQL, Redis, and OpenSearch Sidecars for a Compose-style stack.</p>
+        </div>
+      </div>
+      <footer class="code-footer"><span>Questions?</span></footer>
+      <!-- The linked blog explicitly uses standard gVisor Sandboxes with PostgreSQL, Redis, and OpenSearch Sidecars, without a Docker daemon. This is a separate approach from this deck’s VM Sandbox + Docker Compose example. -->
+    </section>
+  </main>
+  <!--
+    Style reference:
+    https://chris-levy-modal-journey.cleavey1985.chatgpt.site/
+
+    Context for later slides:
+    https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodal_native_test_stack%2Fmodal_native_test_stack.md
+    The earlier POC uses a gVisor Sandbox with Sidecars. This demo keeps
+    Docker Compose and runs a Docker engine inside a Modal VM Sandbox.
+  -->
+</body>
+</html>
