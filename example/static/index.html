@@ -5,40 +5,94 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Tiny Task Board</title>
   <style>
-    :root { font-family: ui-sans-serif, system-ui, sans-serif; color: #18302b; background: #f4f5ef; }
+    :root { font-family: Arial, Helvetica, sans-serif; color: #171717; background: #008080; }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 64px 24px; }
-    main { max-width: 720px; margin: auto; }
-    .eyebrow { font: 12px ui-monospace, monospace; letter-spacing: 2px; text-transform: uppercase; }
-    h1 { font-size: clamp(36px, 7vw, 58px); letter-spacing: -2px; margin: 16px 0; }
-    .intro { color: #596d65; line-height: 1.6; margin-bottom: 32px; }
+    body {
+      margin: 0; padding: 48px 20px;
+      background-image: radial-gradient(#ffffff30 1px, transparent 1px);
+      background-size: 6px 6px;
+      min-height: 100vh;
+    }
+    main { max-width: 780px; margin: auto; }
+    .desktop-label { color: #fff; font: bold 12px "Courier New", monospace; letter-spacing: 2px; margin: 0 0 12px; text-shadow: 1px 1px #003d3d; }
+    .window { background: #c0c0c0; padding: 4px; border: 2px solid; border-color: #fff #202020 #202020 #fff; box-shadow: 8px 8px 0 #004c4c; }
+    .title-bar { display: flex; align-items: center; gap: 10px; background: #000080; color: #fff; padding: 8px 10px; font-size: 14px; font-weight: bold; }
+    .app-icon { display: inline-grid; place-items: center; width: 20px; height: 22px; background: #ffffcc; color: #000080; border: 1px solid #fff; }
+    .edition { margin-left: auto; font: 12px "Courier New", monospace; color: #ffff80; }
+    .window-body { padding: 28px; }
+    .eyebrow { font: bold 12px "Courier New", monospace; letter-spacing: 1px; text-transform: uppercase; color: #000080; }
+    h1 { font: bold clamp(36px, 7vw, 60px)/1.05 "Times New Roman", serif; letter-spacing: -2px; margin: 14px 0; color: #000080; text-shadow: 2px 2px #fff; }
+    .intro { line-height: 1.6; max-width: 540px; margin: 0 0 24px; }
+    .divider { height: 6px; border: 0; background: repeating-linear-gradient(90deg, #000080 0 24px, #008080 24px 48px, #ffff80 48px 72px); margin: 24px 0; }
+    .form-label, h2 { display: block; font: bold 14px "Courier New", monospace; margin: 0 0 10px; }
     form { display: flex; gap: 10px; }
-    input[type=text] { flex: 1; min-width: 0; padding: 14px; border: 1px solid #c9d4c8; border-radius: 8px; font: inherit; }
-    button { padding: 12px 18px; border: 0; border-radius: 8px; background: #1c5441; color: white; font: inherit; cursor: pointer; }
-    button:disabled { opacity: .5; cursor: wait; }
-    button:focus-visible, input:focus-visible { outline: 3px solid #8ccca5; outline-offset: 3px; }
-    ul { list-style: none; padding: 0; margin-top: 24px; }
-    li { display: flex; gap: 14px; align-items: center; background: white; padding: 20px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #e0e6dd; }
-    li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
-    input[type=checkbox] { width: 20px; height: 20px; accent-color: #1c5441; }
-    li.done label { text-decoration: line-through; color: #819188; }
-    #empty, footer { color: #748379; font-size: 14px; margin-top: 28px; }
-    #error { color: #a03326; min-height: 1.4em; }
+    input[type=text] { flex: 1; min-width: 0; padding: 12px; background: #fff; color: #171717; border: 2px solid; border-color: #505050 #fff #fff #505050; border-radius: 0; font: 16px "Courier New", monospace; }
+    button { padding: 12px 18px; border: 2px solid; border-color: #fff #202020 #202020 #fff; border-radius: 0; background: #c0c0c0; color: #171717; font: bold 14px Arial, sans-serif; cursor: pointer; box-shadow: 1px 1px 0 #202020; }
+    button:hover { background: #d8d8d8; }
+    button:active { border-color: #202020 #fff #fff #202020; box-shadow: none; }
+    button:disabled { opacity: .6; cursor: wait; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #000080; outline-offset: 3px; }
+    .task-panel { background: #fffef0; border: 2px solid; border-color: #505050 #fff #fff #505050; padding: 18px; }
+    h2 { color: #000080; padding-bottom: 12px; border-bottom: 1px dashed #777; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { display: flex; gap: 12px; align-items: center; padding: 14px 0; border-bottom: 1px dotted #aaa; }
+    li:last-child { border-bottom: 0; }
+    li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; line-height: 1.5; }
+    input[type=checkbox] { flex-shrink: 0; width: 22px; height: 22px; margin: 0; accent-color: #000080; cursor: pointer; }
+    li.done label { text-decoration: line-through; color: #606060; }
+    #empty { color: #555; line-height: 1.6; font: 14px/1.6 "Courier New", monospace; margin: 18px 0 4px; }
+    #error { color: #900000; font-weight: bold; min-height: 1.4em; font-size: 14px; margin: 12px 0; }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .badge { display: inline-block; padding: 5px 9px; border: 2px outset #fff; background: #000080; color: #fff; font: bold 11px "Courier New", monospace; }
+    .badge:nth-child(2) { background: #ffff80; color: #171717; }
+    .badge:nth-child(3) { background: #005454; }
+    footer { display: flex; gap: 8px; align-items: center; margin-top: 4px; padding: 8px 10px; border: 1px solid; border-color: #808080 #fff #fff #808080; font-size: 12px; line-height: 1.5; }
+    .disk { font-size: 17px; color: #000080; }
+    .desktop-note { text-align: center; color: #fff; font: 12px/1.6 "Courier New", monospace; margin: 22px 0 0; }
+    @media (max-width: 520px) {
+      body { padding: 24px 12px; }
+      .window-body { padding: 20px 14px; }
+      .edition { font-size: 10px; }
+      form { flex-direction: column; }
+      button { min-height: 44px; }
+      .task-panel { padding: 14px; }
+    }
   </style>
 </head>
 <body>
 <main>
-  <div class="eyebrow">A small place to start</div>
-  <h1>Tiny Task Board</h1>
-  <p class="intro">Make a little progress. Add a task, check it off, come back for the next one.</p>
-  <form id="add-form">
-    <input id="title" type="text" aria-label="New task" placeholder="What needs doing?" maxlength="200" required>
-    <button type="submit">Add task</button>
-  </form>
-  <p id="error" role="alert"></p>
-  <ul id="tasks" aria-label="Tasks"></ul>
-  <p id="empty" hidden>Nothing here yet. Make room for your first task.</p>
-  <footer>Your tasks are saved when you come back.</footer>
+  <p class="desktop-label">WELCOME TO YOUR PRODUCTIVITY HOMEPAGE</p>
+  <div class="window">
+    <div class="title-bar">
+      <span class="app-icon" aria-hidden="true">✓</span>
+      <span>Tiny Task Board</span>
+      <span class="edition">'90s edition</span>
+    </div>
+    <div class="window-body">
+      <div class="eyebrow">★ Small tasks. Big possibilities. ★</div>
+      <h1>Tiny Task Board</h1>
+      <p class="intro">Welcome to your little corner of the web. Add a task, check it off, and make a little progress. One click at a time.</p>
+      <hr class="divider">
+      <label class="form-label" for="title">&gt; What's on your to-do list?</label>
+      <form id="add-form">
+        <input id="title" type="text" aria-label="New task" placeholder="Type your next great idea..." maxlength="200" required>
+        <button type="submit">Add task</button>
+      </form>
+      <p id="error" role="alert"></p>
+      <section class="task-panel" aria-labelledby="tasks-heading">
+        <h2 id="tasks-heading">Your tasks / check to complete</h2>
+        <ul id="tasks" aria-label="Tasks"></ul>
+        <p id="empty" hidden>No tasks yet. Every great homepage starts with a little ambition. Add your first task above!</p>
+      </section>
+      <div class="badges" aria-label="Board motto">
+        <span class="badge">100% HAND-CLICKED</span>
+        <span class="badge">SMALL STEPS CLUB</span>
+        <span class="badge">WORLD WIDE WEB</span>
+      </div>
+    </div>
+    <footer><span class="disk" aria-hidden="true">▣</span> Your tasks are saved when you come back.</footer>
+  </div>
+  <p class="desktop-note">Best viewed with a can-do attitude.<br>Thanks for stopping by!</p>
 </main>
 <script>
   const list = document.querySelector('#tasks');
