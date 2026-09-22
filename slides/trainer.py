@@ -251,4 +251,3 @@ def train_model(smoke: bool = False):
 @app.local_entrypoint()
 def main(smoke: bool = False):
     train_model.remote(smoke)
-
