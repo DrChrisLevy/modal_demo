@@ -59,7 +59,6 @@ class VM:
                 "name": NAME,
                 "sandbox_id": sandbox.object_id,
                 "output": str(output),
-                "ref": REF,
             }
             save(ACTIVE, state)
             return cls(state)
@@ -68,7 +67,6 @@ class VM:
             raise
 
     def record(self):
-        save(self.output / "result.json", self.state)
         save(ACTIVE, self.state)
 
     def run(self, command, *, cwd=None, timeout=900, secrets=()):
@@ -132,7 +130,6 @@ class VM:
             "prompt.txt",
             "codex-events.jsonl",
             "agent-summary.txt",
-            "pr-url.txt",
         ):
             try:
                 self.sandbox.filesystem.copy_to_local(f"/artifacts/{name}", self.output / name)
@@ -142,8 +139,6 @@ class VM:
 
     def stop(self):
         self.sandbox.terminate(wait=True)
-        self.state["terminated"] = True
-        save(self.output / "result.json", self.state)
         ACTIVE.unlink(missing_ok=True)
         print("Remote VM stopped.", flush=True)
 
@@ -217,16 +212,12 @@ def up():
         vm.stop()
         vm = None
     if vm is None:
-        started = time.monotonic()
         with modal.enable_output():
             vm = VM.create(prepared_image())
         try:
             vm.checkout()
             vm.run("docker compose up --build --wait --wait-timeout 120")
-            vm.state.update(
-                url=vm.sandbox.tunnels(timeout=60)[PORT].url,
-                startup_seconds=round(time.monotonic() - started, 3),
-            )
+            vm.state["url"] = vm.sandbox.tunnels(timeout=60)[PORT].url
             vm.record()
         except BaseException:
             try:
