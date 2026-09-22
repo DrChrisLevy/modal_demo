@@ -482,3 +482,6 @@ code { font-family: "Geist Mono", monospace; }
     break-after: page;
   }
 }
+
+.ci-slide .code-layout { grid-template-columns: 49cqw 1fr; gap: 3cqw; }
+.ci-slide .source-excerpt pre { font-size: 1.40625cqw; }
