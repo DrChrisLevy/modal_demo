@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Docker Compose on Modal · Chris Levy</title>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
   <script src="presentation.js" defer></script>
 </head>
 <body>
@@ -386,9 +386,40 @@ image = sandbox.<span class="py-call">snapshot_filesystem</span>(<span class="py
       <!-- Pseudocode based on load_or_prepare_image() in runner/remote.py:189–211. cached stands for metadata loaded from PREPARED, or None if absent. VM creation and checkout are summarized in a comment; sandbox represents vm.sandbox. The exact pull/build command is passed directly to Sandbox.exec() in place of VM.run(). Its failure checks, logging, process management, timeout, and preparation lock are omitted. Before snapshotting, the real code removes /workspace/repo, /root/.config/gh, and /root/.gitconfig, sends TERM to Docker, waits for its PID file to disappear, and syncs. These steps are summarized in the comment and must not be skipped in the implementation. It saves the image ID and a seven-day expiry, then terminates the preparation VM in finally. This is a filesystem snapshot containing Docker image/build state, not a memory snapshot or saved live app. Fresh application VMs still clone the repo and run Compose. -->
     </section>
 
-    <section class="slide takeaway-slide" aria-labelledby="slide-16-title" aria-roledescription="slide" hidden>
+    <section class="slide code-slide ci-slide" aria-labelledby="slide-16-title" aria-roledescription="slide" hidden>
+      <header class="content-heading"><h2 id="slide-16-title">Run it in GitHub Actions</h2></header>
+      <div class="code-layout">
+        <figure class="source-excerpt"><pre><code class="language-yaml"><span class="py-call">on</span>: pull_request
+
+<span class="py-call">runs-on</span>: ubuntu-latest
+<span class="py-call">timeout-minutes</span>: 20
+<span class="py-call">env</span>:
+  <span class="py-call">GH_TOKEN</span>: ${{ github.token }}
+  <span class="py-call">MODAL_TOKEN_ID</span>: ${{ secrets.MODAL_TOKEN_ID }}
+  <span class="py-call">MODAL_TOKEN_SECRET</span>: ${{ secrets.MODAL_TOKEN_SECRET }}
+  <span class="py-call">RUN_REPO</span>: ${{ github.repository }}
+  <span class="py-call">RUN_REF</span>: ${{ github.sha }}</code></pre></figure>
+        <figure class="source-excerpt"><pre><code class="language-yaml"><span class="py-call">steps</span>:
+  - <span class="py-call">uses</span>: actions/checkout@v6
+  - <span class="py-call">uses</span>: astral-sh/setup-uv@v10.1.0
+  - <span class="py-call">name</span>: Test in Modal
+    <span class="py-call">run</span>: |
+      <span class="py-string">./run up remote ci</span>
+      <span class="py-string">./run test remote ci</span>
+  - <span class="py-call">name</span>: Stop Modal VM
+    <span class="py-call">if</span>: always()
+    <span class="py-call">run</span>: <span class="py-string">./run down remote ci</span></code></pre></figure>
+      </div>
+      <footer class="code-footer">
+        <a href="https://github.com/DrChrisLevy/modal_demo/blob/main/.github/workflows/ci.yml" target="_blank" rel="noopener noreferrer">Workflow ↗</a>
+        <a href="https://github.com/DrChrisLevy/modal_demo/pulls" target="_blank" rel="noopener noreferrer">Pull requests ↗</a>
+      </footer>
+      <!-- Excerpt from .github/workflows/ci.yml. Job fields and steps are verbatim, dedented for display; workflow name, contents: read permission and jobs/test wrapper omitted. GitHub Actions orchestrates; tests run in the Modal VM. -->
+    </section>
+
+    <section class="slide takeaway-slide" aria-labelledby="slide-17-title" aria-roledescription="slide" hidden>
       <header class="content-heading">
-        <h2 id="slide-16-title">Same workflow.<br>More places to run it.</h2>
+        <h2 id="slide-17-title">Same workflow.<br>More places to run it.</h2>
       </header>
       <div class="closing-content">
         <p>Keep your existing Docker Compose setup.</p>
@@ -400,9 +431,9 @@ image = sandbox.<span class="py-call">snapshot_filesystem</span>(<span class="py
       </footer>
     </section>
 
-    <section class="slide resources-slide" aria-labelledby="slide-17-title" aria-roledescription="slide" hidden>
+    <section class="slide resources-slide" aria-labelledby="slide-18-title" aria-roledescription="slide" hidden>
       <header class="content-heading">
-        <h2 id="slide-17-title">Build it for your workflow</h2>
+        <h2 id="slide-18-title">Build it for your workflow</h2>
       </header>
       <div class="resources-content">
         <p>Explore the docs: <a href="https://modal.com/docs" target="_blank" rel="noopener noreferrer">modal.com/docs ↗</a></p>
