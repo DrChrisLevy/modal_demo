@@ -22,6 +22,7 @@
     li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
     input[type=checkbox] { width: 20px; height: 20px; accent-color: #1c5441; }
     li.done label { text-decoration: line-through; color: #819188; }
+    .delete-task { background: #a03326; flex-shrink: 0; }
     #empty, footer { color: #748379; font-size: 14px; margin-top: 28px; }
     #error { color: #a03326; min-height: 1.4em; }
   </style>
@@ -46,6 +47,7 @@
   async function request(path, options = {}) {
     const response = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...options});
     if (!response.ok) throw new Error('Something went wrong. Please try again.');
+    if (response.status === 204) return;
     return response.json();
   }
   async function refresh() {
@@ -67,7 +69,20 @@
         } catch (e) { checkbox.checked = !checkbox.checked; error.textContent = e.message; }
         finally { checkbox.disabled = false; }
       });
-      row.append(checkbox, label); list.append(row);
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button'; deleteButton.className = 'delete-task';
+      deleteButton.textContent = 'Delete';
+      deleteButton.setAttribute('aria-label', `Delete task: ${task.title}`);
+      deleteButton.addEventListener('click', async () => {
+        deleteButton.disabled = true; checkbox.disabled = true; error.textContent = '';
+        try {
+          await request(`/api/tasks/${task.id}`, {method: 'DELETE'});
+          row.remove();
+          document.querySelector('#empty').hidden = list.children.length > 0;
+        } catch (e) { error.textContent = e.message; }
+        finally { deleteButton.disabled = false; checkbox.disabled = false; }
+      });
+      row.append(checkbox, label, deleteButton); list.append(row);
     }
   }
   document.querySelector('#add-form').addEventListener('submit', async event => {

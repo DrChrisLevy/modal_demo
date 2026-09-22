@@ -49,6 +49,24 @@ def test_missing_task(api):
     assert api.patch("/api/tasks/2147483647", json={"done": True}).status_code == 404
 
 
+@pytest.mark.parametrize("done", [False, True])
+def test_delete_task(api, title, done):
+    task = api.post("/api/tasks", json={"title": title}).json()
+    other = api.post("/api/tasks", json={"title": title + "-keep"}).json()
+    if done:
+        assert api.patch(f"/api/tasks/{task['id']}", json={"done": True}).status_code == 200
+
+    response = api.delete(f"/api/tasks/{task['id']}")
+    assert response.status_code == 204
+    assert response.content == b""
+    remaining = api.get("/api/tasks").json()
+    assert all(item["id"] != task["id"] for item in remaining)
+    assert other in remaining
+    missing = api.delete(f"/api/tasks/{task['id']}")
+    assert missing.status_code == 404
+    assert missing.json() == {"detail": "Task not found"}
+
+
 def test_sql_characters_are_data(api, title):
     title += "'); DROP TABLE tasks; --"
     response = api.post("/api/tasks", json={"title": title})
