@@ -22,6 +22,7 @@
     li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
     input[type=checkbox] { width: 20px; height: 20px; accent-color: #1c5441; }
     li.done label { text-decoration: line-through; color: #819188; }
+    .remove { background: #f9ece9; color: #a03326; }
     #empty, footer { color: #748379; font-size: 14px; margin-top: 28px; }
     #error { color: #a03326; min-height: 1.4em; }
   </style>
@@ -46,7 +47,7 @@
   async function request(path, options = {}) {
     const response = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...options});
     if (!response.ok) throw new Error('Something went wrong. Please try again.');
-    return response.json();
+    return response.status === 204 ? null : response.json();
   }
   async function refresh() {
     const tasks = await request('/api/tasks');
@@ -59,15 +60,26 @@
       checkbox.type = 'checkbox'; checkbox.checked = task.done; checkbox.id = `task-${task.id}`;
       const label = document.createElement('label');
       label.htmlFor = checkbox.id; label.textContent = task.title;
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'remove'; remove.textContent = 'Remove';
+      remove.setAttribute('aria-label', `Remove task: ${task.title}`);
+      remove.addEventListener('click', async () => {
+        remove.disabled = true; checkbox.disabled = true; error.textContent = '';
+        try {
+          await request(`/api/tasks/${task.id}`, {method: 'DELETE'});
+          await refresh();
+        } catch (e) { error.textContent = e.message; }
+        finally { remove.disabled = false; checkbox.disabled = false; }
+      });
       checkbox.addEventListener('change', async () => {
-        checkbox.disabled = true; error.textContent = '';
+        checkbox.disabled = true; remove.disabled = true; error.textContent = '';
         try {
           await request(`/api/tasks/${task.id}`, {method: 'PATCH', body: JSON.stringify({done: checkbox.checked})});
           await refresh();
         } catch (e) { checkbox.checked = !checkbox.checked; error.textContent = e.message; }
-        finally { checkbox.disabled = false; }
+        finally { checkbox.disabled = false; remove.disabled = false; }
       });
-      row.append(checkbox, label); list.append(row);
+      row.append(checkbox, label, remove); list.append(row);
     }
   }
   document.querySelector('#add-form').addEventListener('submit', async event => {

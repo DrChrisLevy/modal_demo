@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import psycopg
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import FileResponse
 from psycopg.rows import dict_row
 from pydantic import BaseModel, Field, field_validator
@@ -81,3 +81,14 @@ def update_task(task_id: int, task: UpdateTask):
     if row is None:
         raise HTTPException(404, "Task not found")
     return row
+
+
+@app.delete("/api/tasks/{task_id}", status_code=204)
+def delete_task(task_id: int):
+    with database() as connection:
+        row = connection.execute(
+            "DELETE FROM tasks WHERE id = %s RETURNING id", (task_id,)
+        ).fetchone()
+    if row is None:
+        raise HTTPException(404, "Task not found")
+    return Response(status_code=204)
