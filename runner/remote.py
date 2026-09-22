@@ -22,6 +22,27 @@ PORT = int(os.environ["RUN_PORT"])
 NAME = os.environ.get("RUN_NAME", "app")
 
 
+def print_agent_event(line):
+    try:
+        event = json.loads(line)
+    except ValueError:
+        print(line, end="", flush=True)
+        return
+    item = event.get("item", {})
+    kind = event.get("type")
+    if kind == "item.started" and item.get("type") == "command_execution":
+        print(f"\nRunning: {item['command']}", flush=True)
+    elif kind == "item.completed":
+        if item.get("type") == "agent_message":
+            print(f"\n{item.get('text', '')}", flush=True)
+        elif item.get("type") == "command_execution":
+            print(f"  {item.get('status', 'completed')} (exit {item.get('exit_code')})", flush=True)
+    elif kind == "turn.completed":
+        print(f"\nCompleted. Token usage: {event.get('usage', {})}", flush=True)
+    elif kind in {"turn.failed", "error"}:
+        print(f"\nAgent error: {event.get('error', event.get('message', event))}", flush=True)
+
+
 def save(path, value):
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(value, indent=2) + "\n")
@@ -69,7 +90,7 @@ class VM:
     def record(self):
         save(ACTIVE, self.state)
 
-    def run(self, command, *, cwd=None, timeout=900, secrets=()):
+    def run(self, command, *, cwd=None, timeout=900, secrets=(), stream_agent=False):
         print(f"$ {command}", flush=True)
         pidfile = f"/tmp/run-{uuid4().hex}.pid"
         process = self.sandbox.exec(
@@ -85,14 +106,28 @@ class VM:
             secrets=secrets,
         )
         try:
-            output = process.stdout.read()
+            if stream_agent:
+                chunks = []
+                pending = ""
+                for chunk in process.stdout:
+                    chunks.append(chunk)
+                    pending += chunk
+                    while "\n" in pending:
+                        line, pending = pending.split("\n", 1)
+                        print_agent_event(line + "\n")
+                if pending:
+                    print_agent_event(pending)
+                output = "".join(chunks)
+            else:
+                output = process.stdout.read()
             process.wait()
         except KeyboardInterrupt:
             self.sandbox.exec("bash", "-c", f"kill -TERM -- -$(cat {pidfile})").wait()
             raise
         with (self.output / "commands.log").open("a") as log:
             log.write(f"\n$ {command}\n{output}\nexit={process.returncode}\n")
-        print(output[-12000:], end="", flush=True)
+        if not stream_agent:
+            print(output[-12000:], end="", flush=True)
         if process.returncode:
             raise RuntimeError(f"Command exited {process.returncode}: {command}")
         return output
@@ -245,10 +280,10 @@ def agent(vm, prompt):
         vm.run(
             "codex --sandbox danger-full-access --ask-for-approval never exec --json "
             "--output-last-message /artifacts/agent-summary.txt - "
-            "</artifacts/prompt.txt >/artifacts/codex-events.jsonl",
+            "</artifacts/prompt.txt | tee /artifacts/codex-events.jsonl",
             cwd="/workspace/repo",
+            stream_agent=True,
         )
-        print(vm.sandbox.filesystem.read_text("/artifacts/agent-summary.txt"), flush=True)
     finally:
         vm.collect()
 
