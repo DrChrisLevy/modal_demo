@@ -101,3 +101,5 @@ With the Codex CLI installed locally:
 ```
 
 Use `./run --help` for the command summary.
+
+The [slides](slides/) accompany a small prepared talk.

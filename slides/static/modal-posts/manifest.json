@@ -1,0 +1,173 @@
+[
+  {
+    "date": "2024-04-15",
+    "title": "Using Modal to Transcribe YouTube Videos with Whisper",
+    "image": "2024-04-15-whisper.webp",
+    "width": 1800,
+    "height": 318,
+    "source": "Screenshot 2026-09-21 at 7.20.47\u202fPM.png",
+    "source_bytes": 276695,
+    "bytes": 162008,
+    "crop_box": [
+      89,
+      112,
+      1945,
+      400
+    ],
+    "url": "https://drchrislevy.com/blog/blog_post?fpath=posts%2Fintro_modal%2Fintro_modal.ipynb"
+  },
+  {
+    "date": "2024-09-13",
+    "title": "Building with Modal",
+    "image": "2024-09-13-building-with-modal.webp",
+    "width": 1800,
+    "height": 320,
+    "source": "Screenshot 2026-09-21 at 7.22.23\u202fPM.png",
+    "source_bytes": 250526,
+    "bytes": 139378,
+    "crop_box": [
+      93,
+      115,
+      1949,
+      406
+    ],
+    "url": "https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodal_fun%2Fmodal_blog.ipynb"
+  },
+  {
+    "date": "2024-10-30",
+    "title": "PDF Q&A App using ColPali, Modal, and FastHTML",
+    "image": "2024-10-30-colpali.webp",
+    "width": 1800,
+    "height": 318,
+    "source": "Screenshot 2026-09-21 at 7.22.09\u202fPM.png",
+    "source_bytes": 260096,
+    "bytes": 153686,
+    "crop_box": [
+      99,
+      110,
+      1955,
+      398
+    ],
+    "url": "https://drchrislevy.com/blog/blog_post?fpath=posts%2Fcolpali%2Fcolpali_blog.ipynb"
+  },
+  {
+    "date": "2024-12-29",
+    "title": "Fine-Tuning ModernBERT For Classification Tasks on Modal",
+    "image": "2024-12-29-modernbert.webp",
+    "width": 1800,
+    "height": 318,
+    "source": "Screenshot 2026-09-21 at 7.21.50\u202fPM.png",
+    "source_bytes": 242905,
+    "bytes": 136958,
+    "crop_box": [
+      117,
+      84,
+      1973,
+      372
+    ],
+    "url": "https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodern_bert%2Fmodern_bert.ipynb"
+  },
+  {
+    "date": "2025-08-08",
+    "title": "Deploying a Remote MCP Server to Modal",
+    "image": "2025-08-08-remote-mcp.webp",
+    "width": 1800,
+    "height": 257,
+    "source": "Screenshot 2026-09-21 at 7.21.32\u202fPM.png",
+    "source_bytes": 218721,
+    "bytes": 111548,
+    "crop_box": [
+      77,
+      90,
+      1933,
+      314
+    ],
+    "url": "https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmcp2%2Fmcp2.ipynb"
+  },
+  {
+    "date": "2025-08-19",
+    "title": "Running Qwen Image Edit on Modal",
+    "image": "2025-08-19-qwen-image-edit.webp",
+    "width": 1800,
+    "height": 257,
+    "source": "Screenshot 2026-09-21 at 7.21.25\u202fPM.png",
+    "source_bytes": 216787,
+    "bytes": 112638,
+    "crop_box": [
+      73,
+      92,
+      1929,
+      316
+    ],
+    "url": "https://drchrislevy.com/blog/blog_post?fpath=posts%2Fqwen_image_edit%2Fqwen_image_edit.ipynb"
+  },
+  {
+    "date": "2026-02-03",
+    "title": "A hackable ChatGPT-like code interpreter",
+    "image": "2026-02-03-code-interpreter.webp",
+    "width": 1800,
+    "height": 257,
+    "source": "Screenshot 2026-09-21 at 7.21.13\u202fPM.png",
+    "source_bytes": 270873,
+    "bytes": 162274,
+    "crop_box": [
+      71,
+      70,
+      1927,
+      294
+    ],
+    "url": "https://drchrislevy.com/blog/blog_post?fpath=posts%2Ffast_agent_demo%2Ffast_agent_demo.md"
+  },
+  {
+    "date": "2026-02-16",
+    "title": "FastAPI ASGI on Modal for OpenAI Throughput",
+    "image": "2026-02-16-openai-throughput.webp",
+    "width": 1800,
+    "height": 279,
+    "source": "Screenshot 2026-09-21 at 7.21.06\u202fPM.png",
+    "source_bytes": 242505,
+    "bytes": 140262,
+    "crop_box": [
+      63,
+      103,
+      1919,
+      350
+    ],
+    "url": "https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodal_asgi_openai%2Fmodal_openai.ipynb"
+  },
+  {
+    "date": "2026-08-29",
+    "title": "A POC: Using Modal for Backend Development, CI, and Coding Agents",
+    "image": "2026-08-29-backend-development.webp",
+    "width": 1800,
+    "height": 280,
+    "source": "Screenshot 2026-09-21 at 7.20.57\u202fPM.png",
+    "source_bytes": 232600,
+    "bytes": 134300,
+    "crop_box": [
+      87,
+      92,
+      1943,
+      340
+    ],
+    "url": "https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodal_native_test_stack%2Fmodal_native_test_stack.md"
+  },
+  {
+    "date": "2024-04-15",
+    "title": "Using Modal to Transcribe YouTube Videos with Whisper",
+    "image": "2024-04-15-whisper-alternate.webp",
+    "width": 1800,
+    "height": 318,
+    "source": "Screenshot 2026-09-21 at 7.22.31\u202fPM.png",
+    "source_bytes": 277874,
+    "bytes": 162008,
+    "crop_box": [
+      115,
+      94,
+      1971,
+      382
+    ],
+    "duplicate_of": "2024-04-15-whisper.webp",
+    "url": "https://drchrislevy.com/blog/blog_post?fpath=posts%2Fintro_modal%2Fintro_modal.ipynb"
+  }
+]
