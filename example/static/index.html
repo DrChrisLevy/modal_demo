@@ -3,84 +3,203 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#214e40">
   <title>Tiny Task Board</title>
   <style>
-    :root { font-family: ui-sans-serif, system-ui, sans-serif; color: #18302b; background: #f4f5ef; }
+    :root { font-family: system-ui, sans-serif; color: #233b32; background: #f5f3eb; color-scheme: light; }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 64px 24px; }
-    main { max-width: 720px; margin: auto; }
-    .eyebrow { font: 12px ui-monospace, monospace; letter-spacing: 2px; text-transform: uppercase; }
-    h1 { font-size: clamp(36px, 7vw, 58px); letter-spacing: -2px; margin: 16px 0; }
-    .intro { color: #596d65; line-height: 1.6; margin-bottom: 32px; }
-    form { display: flex; gap: 10px; }
-    input[type=text] { flex: 1; min-width: 0; padding: 14px; border: 1px solid #c9d4c8; border-radius: 8px; font: inherit; }
-    button { padding: 12px 18px; border: 0; border-radius: 8px; background: #1c5441; color: white; font: inherit; cursor: pointer; }
-    button:disabled { opacity: .5; cursor: wait; }
-    button:focus-visible, input:focus-visible { outline: 3px solid #8ccca5; outline-offset: 3px; }
-    ul { list-style: none; padding: 0; margin-top: 24px; }
-    li { display: flex; gap: 14px; align-items: center; background: white; padding: 20px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #e0e6dd; }
-    li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
-    input[type=checkbox] { width: 20px; height: 20px; accent-color: #1c5441; }
-    li.done label { text-decoration: line-through; color: #819188; }
-    #empty, footer { color: #748379; font-size: 14px; margin-top: 28px; }
-    #error { color: #a03326; min-height: 1.4em; }
+    [hidden] { display: none !important; }
+    body { margin: 0; padding: 40px 24px; }
+    main { max-width: 960px; margin: auto; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 750; font-size: 15px; }
+    .mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #214e40; color: white; }
+    header { padding: 52px 0 32px; }
+    .eyebrow { font-size: 12px; font-weight: 750; letter-spacing: 2px; text-transform: uppercase; color: #596b60; }
+    h1 { font: 500 clamp(40px, 7vw, 64px)/1.08 Georgia, serif; letter-spacing: -2px; margin: 12px 0 18px; }
+    .intro, .hint { color: #596b60; line-height: 1.6; }
+    .intro { margin: 0; }
+    .workspace { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; align-items: start; }
+    .composer { padding: 26px; background: #e6ecdf; border: 1px solid #d4dece; border-radius: 18px; }
+    h2 { margin: 0; font-size: 18px; }
+    .composer p { font-size: 14px; margin: 10px 0 24px; }
+    label.field { display: block; font-size: 13px; font-weight: 650; margin-bottom: 8px; }
+    input[type=text] { width: 100%; padding: 13px 12px; border: 1px solid #94a397; border-radius: 8px; font: inherit; background: #fffefa; color: inherit; }
+    button { min-height: 44px; padding: 10px 16px; border: 1px solid transparent; border-radius: 8px; background: #214e40; color: white; font: 650 14px system-ui, sans-serif; cursor: pointer; }
+    button:hover { background: #153b2f; }
+    button:disabled { opacity: .6; cursor: wait; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #986113; outline-offset: 4px; }
+    #add-form button { width: 100%; margin-top: 12px; }
+    .hint { font-size: 12px; display: block; margin-top: 10px; }
+    .board { min-width: 0; }
+    .board-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0 18px; }
+    #count { background: #e6ecdf; border-radius: 20px; padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { display: flex; align-items: center; gap: 8px; background: #fffefa; border: 1px solid #dedfd5; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+    li label { display: flex; flex: 1; align-items: center; gap: 12px; min-height: 44px; min-width: 0; cursor: pointer; line-height: 1.5; }
+    .task-title { overflow-wrap: anywhere; }
+    input[type=checkbox] { width: 22px; height: 22px; flex-shrink: 0; accent-color: #214e40; cursor: pointer; }
+    li.done { background: #edf0e8; }
+    li.done .task-title { text-decoration: line-through; color: #596b60; }
+    .secondary { background: transparent; border-color: #aab5aa; color: #233b32; }
+    .secondary:hover { background: #e6ecdf; }
+    .delete { background: transparent; color: #964237; }
+    .delete:hover { background: #f8e9e4; }
+    .danger { background: #963f32; }
+    .danger:hover { background: #773025; }
+    .state { text-align: center; padding: 40px 24px; border: 1px dashed #aab5aa; border-radius: 12px; line-height: 1.6; }
+    .state strong { display: block; margin-bottom: 6px; }
+    .state p { color: #596b60; font-size: 14px; margin: 0; }
+    .error { color: #8b3025; font-size: 14px; line-height: 1.5; }
+    .error:empty { display: none; }
+    #status { min-height: 24px; font-size: 13px; color: #596b60; }
+    footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #d9ded1; font-size: 12px; color: #596b60; }
+    dialog { width: min(440px, calc(100% - 32px)); padding: 28px; border: 1px solid #d4dece; border-radius: 18px; background: #fffefa; color: #233b32; box-shadow: 0 24px 80px #122b3240; }
+    dialog::backdrop { background: #142d2866; }
+    dialog h2 { font: 500 28px Georgia, serif; }
+    dialog p { line-height: 1.6; }
+    #delete-title { font-weight: 650; overflow-wrap: anywhere; max-height: 160px; overflow: auto; }
+    .dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+    @media (max-width: 700px) {
+      body { padding: 24px 16px; }
+      header { padding: 36px 0 26px; }
+      .workspace { grid-template-columns: 1fr; }
+      .composer { padding: 20px; }
+      .composer p { margin-bottom: 16px; }
+      footer { margin-top: 24px; }
+    }
   </style>
 </head>
 <body>
 <main>
-  <div class="eyebrow">A small place to start</div>
-  <h1>Tiny Task Board</h1>
-  <p class="intro">Make a little progress. Add a task, check it off, come back for the next one.</p>
-  <form id="add-form">
-    <input id="title" type="text" aria-label="New task" placeholder="What needs doing?" maxlength="200" required>
-    <button type="submit">Add task</button>
-  </form>
-  <p id="error" role="alert"></p>
-  <ul id="tasks" aria-label="Tasks"></ul>
-  <p id="empty" hidden>Nothing here yet. Make room for your first task.</p>
-  <footer>Your tasks are saved when you come back.</footer>
+  <div class="brand"><span class="mark" aria-hidden="true">✓</span> Tiny Task Board</div>
+  <header>
+    <div class="eyebrow">A little focus, every day</div>
+    <h1>Make room for progress.</h1>
+    <p class="intro">Capture the next step. Check it off. Take a breath.</p>
+  </header>
+  <div class="workspace">
+    <section class="composer" aria-labelledby="new-heading">
+      <h2 id="new-heading">Start with one thing</h2>
+      <p class="intro">Big plans begin with small, doable tasks.</p>
+      <form id="add-form">
+        <label class="field" for="title">New task</label>
+        <input id="title" type="text" placeholder="What needs doing?" maxlength="200" required aria-describedby="title-hint">
+        <span class="hint" id="title-hint">Keep it simple. Up to 200 characters.</span>
+        <button type="submit">Add task <span aria-hidden="true">＋</span></button>
+      </form>
+      <p id="create-error" class="error" role="alert"></p>
+    </section>
+    <section class="board" aria-labelledby="tasks-heading">
+      <div class="board-heading"><h2 id="tasks-heading" tabindex="-1">Your tasks</h2><span id="count">—</span></div>
+      <div id="load-state" class="state"><strong>Loading your tasks…</strong></div>
+      <div id="load-error" class="state" hidden><strong>Couldn't load your tasks</strong><p>Please check your connection and try again.</p><button id="retry" class="secondary">Try again</button></div>
+      <p id="error" class="error" role="alert"></p>
+      <ul id="tasks" aria-label="Tasks"></ul>
+      <div id="empty" class="state" hidden><strong>A clear space to start</strong><p>Add your first task using the new task field. One small step is enough.</p></div>
+      <p id="status" role="status" aria-live="polite"></p>
+    </section>
+  </div>
+  <footer>A small place to start. Your tasks are saved for your next visit.</footer>
 </main>
+<dialog id="delete-dialog" aria-labelledby="delete-heading" aria-describedby="delete-description delete-title">
+  <h2 id="delete-heading">Delete this task?</h2>
+  <p id="delete-description">This will permanently remove the task. This action can't be undone.</p>
+  <p id="delete-title"></p>
+  <p id="delete-error" class="error" role="alert"></p>
+  <div class="dialog-actions"><button id="cancel-delete" class="secondary" autofocus>Keep task</button><button id="confirm-delete" class="danger">Delete task</button></div>
+</dialog>
 <script>
-  const list = document.querySelector('#tasks');
-  const error = document.querySelector('#error');
+  const $ = selector => document.querySelector(selector);
+  const list = $('#tasks');
+  const dialog = $('#delete-dialog');
+  let tasks = [];
+  let pendingDelete = null;
+  let deleting = false;
+  let loaded = false;
   async function request(path, options = {}) {
     const response = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...options});
-    if (!response.ok) throw new Error('Something went wrong. Please try again.');
-    return response.json();
+    if (!response.ok) throw new Error(response.status === 404
+      ? 'This task no longer exists. Reload the page to update your list.'
+      : 'Could not save your change. Check your connection and try again.');
+    return response.status === 204 ? null : response.json();
+  }
+  function summary() {
+    const remaining = tasks.filter(task => !task.done).length;
+    $('#count').textContent = `${remaining} open · ${tasks.length - remaining} done`;
+    $('#empty').hidden = !loaded || tasks.length > 0;
+  }
+  function addRow(task, prepend = false) {
+    const row = document.createElement('li');
+    row.classList.toggle('done', task.done);
+    const label = document.createElement('label');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox'; checkbox.checked = task.done;
+    const title = document.createElement('span');
+    title.className = 'task-title'; title.textContent = task.title;
+    label.append(checkbox, title);
+    const remove = document.createElement('button');
+    remove.className = 'delete'; remove.textContent = 'Delete';
+    remove.setAttribute('aria-label', `Delete task: ${task.title}`);
+    checkbox.addEventListener('change', async () => {
+      checkbox.disabled = true; remove.disabled = true; $('#error').textContent = '';
+      try {
+        const updated = await request(`/api/tasks/${task.id}`, {method: 'PATCH', body: JSON.stringify({done: checkbox.checked})});
+        task.done = updated.done; row.classList.toggle('done', task.done); summary();
+        $('#status').textContent = task.done ? 'Task completed. Nice work.' : 'Task reopened.';
+      } catch (e) { checkbox.checked = task.done; $('#error').textContent = e.message; }
+      finally { checkbox.disabled = false; remove.disabled = false; }
+    });
+    remove.addEventListener('click', () => {
+      pendingDelete = {task, row, remove};
+      $('#delete-title').textContent = task.title;
+      $('#delete-error').textContent = '';
+      dialog.showModal(); $('#cancel-delete').focus();
+    });
+    row.append(label, remove);
+    if (prepend) list.prepend(row); else list.append(row);
   }
   async function refresh() {
-    const tasks = await request('/api/tasks');
-    list.replaceChildren();
-    document.querySelector('#empty').hidden = tasks.length > 0;
-    for (const task of tasks) {
-      const row = document.createElement('li');
-      row.className = task.done ? 'done' : '';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox'; checkbox.checked = task.done; checkbox.id = `task-${task.id}`;
-      const label = document.createElement('label');
-      label.htmlFor = checkbox.id; label.textContent = task.title;
-      checkbox.addEventListener('change', async () => {
-        checkbox.disabled = true; error.textContent = '';
-        try {
-          await request(`/api/tasks/${task.id}`, {method: 'PATCH', body: JSON.stringify({done: checkbox.checked})});
-          await refresh();
-        } catch (e) { checkbox.checked = !checkbox.checked; error.textContent = e.message; }
-        finally { checkbox.disabled = false; }
-      });
-      row.append(checkbox, label); list.append(row);
-    }
-  }
-  document.querySelector('#add-form').addEventListener('submit', async event => {
-    event.preventDefault(); error.textContent = '';
-    const input = document.querySelector('#title');
-    const button = event.target.querySelector('button'); button.disabled = true;
+    $('#retry').disabled = true; $('#load-error').hidden = true; $('#load-state').hidden = false;
+    $('#add-form button').disabled = true;
     try {
-      await request('/api/tasks', {method: 'POST', body: JSON.stringify({title: input.value})});
-      input.value = ''; await refresh(); input.focus();
-    } catch (e) { error.textContent = e.message; }
-    finally { button.disabled = false; }
+      tasks = await request('/api/tasks'); loaded = true;
+      list.replaceChildren(); tasks.forEach(task => addRow(task)); summary();
+    } catch (e) { $('#load-error').hidden = false; }
+    finally { $('#load-state').hidden = true; $('#retry').disabled = false; $('#add-form button').disabled = !loaded; }
+  }
+  $('#retry').addEventListener('click', refresh);
+  $('#cancel-delete').addEventListener('click', () => dialog.close());
+  dialog.addEventListener('cancel', event => { if (deleting) event.preventDefault(); });
+  $('#confirm-delete').addEventListener('click', async () => {
+    if (!pendingDelete || deleting) return;
+    deleting = true; $('#confirm-delete').disabled = true; $('#cancel-delete').disabled = true;
+    $('#confirm-delete').textContent = 'Deleting…'; $('#delete-error').textContent = '';
+    const {task, row} = pendingDelete;
+    try {
+      await request(`/api/tasks/${task.id}`, {method: 'DELETE'});
+      const next = row.nextElementSibling || row.previousElementSibling;
+      tasks = tasks.filter(item => item.id !== task.id); row.remove(); summary();
+      dialog.close(); pendingDelete = null;
+      (next?.querySelector('.delete') || $('#tasks-heading')).focus();
+      $('#status').textContent = 'Task deleted.';
+    } catch (e) { $('#delete-error').textContent = e.message; }
+    finally {
+      deleting = false; $('#confirm-delete').disabled = false; $('#cancel-delete').disabled = false;
+      $('#confirm-delete').textContent = 'Delete task';
+    }
   });
-  refresh().catch(e => { error.textContent = e.message; });
+  $('#add-form').addEventListener('submit', async event => {
+    event.preventDefault(); $('#create-error').textContent = '';
+    const input = $('#title');
+    if (!input.value.trim()) { $('#create-error').textContent = 'Enter a task before adding it.'; input.focus(); return; }
+    const button = event.target.querySelector('button'); button.disabled = true; input.disabled = true;
+    try {
+      const task = await request('/api/tasks', {method: 'POST', body: JSON.stringify({title: input.value})});
+      tasks.unshift(task); addRow(task, true); summary(); input.value = ''; $('#status').textContent = 'Task added.';
+    } catch (e) { $('#create-error').textContent = e.message; }
+    finally { button.disabled = false; input.disabled = false; input.focus(); }
+  });
+  refresh();
 </script>
 </body>
 </html>
