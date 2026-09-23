@@ -76,8 +76,9 @@ a new conversation; named VMs retain files between calls.
 - Agent runs and remote `down` save a patch, logs, and agent output under
   `~/.cache/modal-compose/`. The command prints the directory. Changes are not
   automatically applied to your local checkout.
-- VMs expire after **30 minutes**. Run `down` before expiry to save remaining
-  work. Remote databases are discarded when their VM stops.
+- Remote commands time out after **1 hour**. VMs expire **1 hour after creation**.
+  Run `down` before expiry to save remaining work. Remote databases are discarded
+  when their VM stops.
 - The first remote run prepares Docker; subsequent VMs reuse the build cache
   for up to seven days.
 

@@ -264,7 +264,7 @@ vol = modal.<span class="py-call">Volume</span>.<span class="py-call">from_name<
     <span class="py-parameter">experimental_options</span>={<span class="py-string">&quot;vm_runtime&quot;</span>: <span class="py-keyword">True</span>},
     <span class="py-parameter">cpu</span>=<span class="py-number">2</span>,
     <span class="py-parameter">memory</span>=<span class="py-number">4096</span>,
-    <span class="py-parameter">timeout</span>=<span class="py-number">1800</span>,
+    <span class="py-parameter">timeout</span>=<span class="py-number">3600</span>,
     <span class="py-parameter">encrypted_ports</span>=[<span class="py-constant">PORT</span>],
     <span class="py-parameter">secrets</span>=[modal.<span class="py-call">Secret</span>.<span class="py-call">from_dict</span>({<span class="py-string">&quot;GH_TOKEN&quot;</span>: token})],
     <span class="py-parameter">readiness_probe</span>=modal.<span class="py-call">Probe</span>.<span class="py-call">with_exec</span>(<span class="py-string">&quot;docker&quot;</span>, <span class="py-string">&quot;info&quot;</span>, <span class="py-parameter">interval_ms</span>=<span class="py-number">500</span>),
@@ -348,7 +348,7 @@ sandbox.<span class="py-call">exec</span>(
 
 sandbox.<span class="py-call">exec</span>(
     <span class="py-string">&quot;bash&quot;</span>, <span class="py-string">&quot;-c&quot;</span>, <span class="py-string">&quot;docker compose up --build --wait --wait-timeout 120&quot;</span>,
-    <span class="py-parameter">workdir</span>=<span class="py-string">f&quot;/workspace/repo/</span>{<span class="py-constant">DIRECTORY</span>}<span class="py-string">&quot;</span>, <span class="py-parameter">timeout</span>=<span class="py-number">900</span>,
+    <span class="py-parameter">workdir</span>=<span class="py-string">f&quot;/workspace/repo/</span>{<span class="py-constant">DIRECTORY</span>}<span class="py-string">&quot;</span>, <span class="py-parameter">timeout</span>=<span class="py-number">3600</span>,
 ).<span class="py-call">wait</span>()</code></pre>
         </figure>
       </div>

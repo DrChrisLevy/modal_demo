@@ -108,6 +108,6 @@ case "$action" in
     echo './run agent name "task"    # use an environment started with up remote name'
     echo 'Remote names default to app. Each name has its own VM, files, database, and URL.'
     echo 'Remote up clones the configured GitHub ref. Down exports changes and stops the VM.'
-    echo 'VMs expire after 30 minutes. Separate agent calls share files, not conversation history.' ;;
+    echo 'VMs expire after 1 hour. Separate agent calls share files, not conversation history.' ;;
   *) echo 'Use ./run --help' >&2; exit 2 ;;
 esac

@@ -68,7 +68,7 @@ class VM:
             experimental_options={"vm_runtime": True},
             cpu=2,
             memory=4096,
-            timeout=1800,
+            timeout=3600,
             encrypted_ports=[PORT],
             secrets=[modal.Secret.from_dict({"GH_TOKEN": token})],
             readiness_probe=modal.Probe.with_exec("docker", "info", interval_ms=500),
@@ -90,7 +90,7 @@ class VM:
     def record(self):
         save(ACTIVE, self.state)
 
-    def run(self, command, *, cwd=None, timeout=900, secrets=(), stream_agent=False):
+    def run(self, command, *, cwd=None, timeout=3600, secrets=(), stream_agent=False):
         print(f"$ {command}", flush=True)
         pidfile = f"/tmp/run-{uuid4().hex}.pid"
         process = self.sandbox.exec(
