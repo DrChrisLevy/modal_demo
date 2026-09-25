@@ -5,41 +5,74 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Tiny Task Board</title>
   <style>
-    :root { font-family: ui-sans-serif, system-ui, sans-serif; color: #18302b; background: #f4f5ef; }
+    :root { font-family: "MS Sans Serif", Tahoma, Arial, sans-serif; color: #171717; background: #008080; color-scheme: light; }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 64px 24px; }
-    main { max-width: 720px; margin: auto; }
-    .eyebrow { font: 12px ui-monospace, monospace; letter-spacing: 2px; text-transform: uppercase; }
-    h1 { font-size: clamp(36px, 7vw, 58px); letter-spacing: -2px; margin: 16px 0; }
-    .intro { color: #596d65; line-height: 1.6; margin-bottom: 32px; }
+    body { margin: 0; padding: 48px 20px; min-height: 100vh; background-image: radial-gradient(#006969 1px, transparent 1px); background-size: 4px 4px; }
+    .desktop-label { max-width: 760px; margin: 0 auto 14px; color: #fff; font: bold 12px "Courier New", monospace; letter-spacing: 2px; }
+    main { max-width: 760px; margin: auto; padding: 4px; background: #c0c0c0; border: 2px solid; border-color: #fff #222 #222 #fff; box-shadow: 8px 8px 0 #004949; }
+    .title-bar { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #000080; color: white; font-size: 14px; font-weight: bold; }
+    .app-icon { color: #ffff80; font: bold 20px "Courier New", monospace; }
+    .window-decoration { margin-left: auto; color: #c0c0c0; font: bold 16px "Courier New", monospace; }
+    .window-body { padding: 26px; }
+    .eyebrow { display: inline-block; padding: 4px 8px; background: #ffff80; border: 1px solid #171717; font: bold 11px "Courier New", monospace; letter-spacing: 1px; text-transform: uppercase; box-shadow: 2px 2px 0 #808080; }
+    h1 { font-family: "Courier New", monospace; font-size: clamp(32px, 6vw, 50px); line-height: 1.05; letter-spacing: -2px; margin: 20px 0 12px; color: #000080; text-shadow: 2px 2px #fff; }
+    .intro { max-width: 520px; line-height: 1.6; margin: 0 0 26px; font-size: 14px; }
+    .section-label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 8px; }
     form { display: flex; gap: 10px; }
-    input[type=text] { flex: 1; min-width: 0; padding: 14px; border: 1px solid #c9d4c8; border-radius: 8px; font: inherit; }
-    button { padding: 12px 18px; border: 0; border-radius: 8px; background: #1c5441; color: white; font: inherit; cursor: pointer; }
-    button:disabled { opacity: .5; cursor: wait; }
-    button:focus-visible, input:focus-visible { outline: 3px solid #8ccca5; outline-offset: 3px; }
-    ul { list-style: none; padding: 0; margin-top: 24px; }
-    li { display: flex; gap: 14px; align-items: center; background: white; padding: 20px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #e0e6dd; }
-    li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
-    input[type=checkbox] { width: 20px; height: 20px; accent-color: #1c5441; }
-    li.done label { text-decoration: line-through; color: #819188; }
-    #empty, footer { color: #748379; font-size: 14px; margin-top: 28px; }
-    #error { color: #a03326; min-height: 1.4em; }
+    input[type=text] { flex: 1; min-width: 0; padding: 12px; border: 2px solid; border-color: #555 #fff #fff #555; border-radius: 0; background: white; color: #171717; font: 16px "Courier New", monospace; }
+    button { padding: 10px 18px; border: 2px solid; border-color: #fff #333 #333 #fff; border-radius: 0; background: #c0c0c0; color: #171717; font: bold 14px Tahoma, Arial, sans-serif; cursor: pointer; box-shadow: 1px 1px 0 #000; }
+    button:hover { background: #d8d8d8; }
+    button:active { border-color: #333 #fff #fff #333; box-shadow: none; }
+    button:disabled { color: #555; cursor: wait; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #000080; outline-offset: 3px; }
+    .list-heading { display: flex; justify-content: space-between; gap: 12px; border-bottom: 2px groove white; padding-bottom: 10px; margin-top: 24px; }
+    h2 { margin: 0; font-size: 14px; }
+    .list-heading span { font: 12px "Courier New", monospace; }
+    ul { list-style: none; padding: 0; margin: 12px 0 0; }
+    li { display: flex; gap: 12px; align-items: center; background: #fffef0; padding: 16px 12px; margin-bottom: 8px; border: 1px solid #808080; box-shadow: 1px 1px 0 white; }
+    li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; font-size: 15px; line-height: 1.5; }
+    input[type=checkbox] { flex-shrink: 0; width: 20px; height: 20px; accent-color: #000080; cursor: pointer; }
+    li.done { background: #dedede; }
+    li.done label { text-decoration: line-through; color: #555; }
+    #empty { border: 2px dashed #808080; padding: 28px 16px; text-align: center; font: 14px/1.7 "Courier New", monospace; background: #ddd; }
+    #error { color: #8b0000; font-size: 14px; line-height: 1.5; }
+    #error:empty { margin: 0; }
+    footer { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; margin-top: 4px; border: 2px solid; border-color: #808080 #fff #fff #808080; font-size: 12px; line-height: 1.5; }
+    .status-light { color: #005500; font-weight: bold; }
+    .web-badges { max-width: 760px; margin: 22px auto 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .badge { border: 2px ridge #fff; padding: 5px 10px; background: #000080; color: #fff; font: bold 11px "Courier New", monospace; text-align: center; }
+    .badge:last-child { background: #ffff80; color: #171717; }
+    @media (max-width: 480px) {
+      body { padding: 24px 12px; }
+      .window-body { padding: 20px 14px; }
+      form { flex-direction: column; }
+      button { min-height: 44px; }
+      .list-heading { flex-wrap: wrap; }
+      .window-decoration { display: none; }
+    }
   </style>
 </head>
 <body>
+<p class="desktop-label">THE PRODUCTIVITY DESKTOP</p>
 <main>
-  <div class="eyebrow">A small place to start</div>
-  <h1>Tiny Task Board</h1>
-  <p class="intro">Make a little progress. Add a task, check it off, come back for the next one.</p>
-  <form id="add-form">
-    <input id="title" type="text" aria-label="New task" placeholder="What needs doing?" maxlength="200" required>
-    <button type="submit">Add task</button>
-  </form>
-  <p id="error" role="alert"></p>
-  <ul id="tasks" aria-label="Tasks"></ul>
-  <p id="empty" hidden>Nothing here yet. Make room for your first task.</p>
-  <footer>Your tasks are saved when you come back.</footer>
+  <div class="title-bar"><span class="app-icon" aria-hidden="true">[✓]</span> Tiny Task Board <span class="window-decoration" aria-hidden="true">▁ □ ×</span></div>
+  <div class="window-body">
+    <div class="eyebrow">Welcome to your task headquarters!</div>
+    <h1>Tiny Task Board</h1>
+    <p class="intro">Big plans. Tiny tasks. Add something to do, check it off, and enjoy a little old-school progress.</p>
+    <label class="section-label" for="title">Your next mission:</label>
+    <form id="add-form">
+      <input id="title" type="text" aria-label="New task" placeholder="What needs doing?" maxlength="200" required>
+      <button type="submit">Add task</button>
+    </form>
+    <p id="error" role="alert"></p>
+    <div class="list-heading"><h2>My tasks</h2><span>CHECK IT OFF. KEEP IT GOING.</span></div>
+    <ul id="tasks" aria-label="Tasks"></ul>
+    <p id="empty" hidden>Your task list is a blank floppy disk.<br>Add your first mission above!</p>
+  </div>
+  <footer><span class="status-light">◆ Auto-save enabled</span><span>Your tasks are saved when you come back.</span></footer>
 </main>
+<div class="web-badges" aria-label="Site badges"><span class="badge">100% HAND-CLICKED</span><span class="badge">BEST VIEWED WITH<br>A CAN-DO ATTITUDE</span></div>
 <script>
   const list = document.querySelector('#tasks');
   const error = document.querySelector('#error');
