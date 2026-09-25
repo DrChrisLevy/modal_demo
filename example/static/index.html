@@ -16,6 +16,7 @@
     input[type=text] { flex: 1; min-width: 0; padding: 14px; border: 1px solid #c9d4c8; border-radius: 8px; font: inherit; }
     button { padding: 12px 18px; border: 0; border-radius: 8px; background: #1c5441; color: white; font: inherit; cursor: pointer; }
     button:disabled { opacity: .5; cursor: wait; }
+    .delete { background: #a03326; flex-shrink: 0; }
     button:focus-visible, input:focus-visible { outline: 3px solid #8ccca5; outline-offset: 3px; }
     ul { list-style: none; padding: 0; margin-top: 24px; }
     li { display: flex; gap: 14px; align-items: center; background: white; padding: 20px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #e0e6dd; }
@@ -46,7 +47,7 @@
   async function request(path, options = {}) {
     const response = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...options});
     if (!response.ok) throw new Error('Something went wrong. Please try again.');
-    return response.json();
+    return response.status === 204 ? null : response.json();
   }
   async function refresh() {
     const tasks = await request('/api/tasks');
@@ -59,15 +60,27 @@
       checkbox.type = 'checkbox'; checkbox.checked = task.done; checkbox.id = `task-${task.id}`;
       const label = document.createElement('label');
       label.htmlFor = checkbox.id; label.textContent = task.title;
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button'; deleteButton.className = 'delete';
+      deleteButton.textContent = 'Delete';
+      deleteButton.setAttribute('aria-label', `Delete task: ${task.title}`);
+      deleteButton.addEventListener('click', async () => {
+        deleteButton.disabled = true; checkbox.disabled = true; error.textContent = '';
+        try {
+          await request(`/api/tasks/${task.id}`, {method: 'DELETE'});
+          await refresh();
+        } catch (e) { error.textContent = e.message; }
+        finally { deleteButton.disabled = false; checkbox.disabled = false; }
+      });
       checkbox.addEventListener('change', async () => {
-        checkbox.disabled = true; error.textContent = '';
+        checkbox.disabled = true; deleteButton.disabled = true; error.textContent = '';
         try {
           await request(`/api/tasks/${task.id}`, {method: 'PATCH', body: JSON.stringify({done: checkbox.checked})});
           await refresh();
         } catch (e) { checkbox.checked = !checkbox.checked; error.textContent = e.message; }
-        finally { checkbox.disabled = false; }
+        finally { checkbox.disabled = false; deleteButton.disabled = false; }
       });
-      row.append(checkbox, label); list.append(row);
+      row.append(checkbox, label, deleteButton); list.append(row);
     }
   }
   document.querySelector('#add-form').addEventListener('submit', async event => {
