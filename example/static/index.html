@@ -16,6 +16,7 @@
     input[type=text] { flex: 1; min-width: 0; padding: 14px; border: 1px solid #c9d4c8; border-radius: 8px; font: inherit; }
     button { padding: 12px 18px; border: 0; border-radius: 8px; background: #1c5441; color: white; font: inherit; cursor: pointer; }
     button:disabled { opacity: .5; cursor: wait; }
+    .remove { background: #fbece9; color: #a03326; }
     button:focus-visible, input:focus-visible { outline: 3px solid #8ccca5; outline-offset: 3px; }
     ul { list-style: none; padding: 0; margin-top: 24px; }
     li { display: flex; gap: 14px; align-items: center; background: white; padding: 20px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #e0e6dd; }
@@ -46,6 +47,7 @@
   async function request(path, options = {}) {
     const response = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...options});
     if (!response.ok) throw new Error('Something went wrong. Please try again.');
+    if (response.status === 204) return;
     return response.json();
   }
   async function refresh() {
@@ -67,7 +69,18 @@
         } catch (e) { checkbox.checked = !checkbox.checked; error.textContent = e.message; }
         finally { checkbox.disabled = false; }
       });
-      row.append(checkbox, label); list.append(row);
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'remove'; remove.textContent = 'Remove';
+      remove.setAttribute('aria-label', `Remove task: ${task.title}`);
+      remove.addEventListener('click', async () => {
+        remove.disabled = true; error.textContent = '';
+        try {
+          await request(`/api/tasks/${task.id}`, {method: 'DELETE'});
+          await refresh();
+        } catch (e) { error.textContent = e.message; }
+        finally { remove.disabled = false; }
+      });
+      row.append(checkbox, label, remove); list.append(row);
     }
   }
   document.querySelector('#add-form').addEventListener('submit', async event => {
