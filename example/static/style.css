@@ -12,7 +12,6 @@ button, a, input, textarea, select, summary { -webkit-tap-highlight-color: trans
 :focus-visible { outline: 3px solid #bdb4f4; outline-offset: 3px; }
 [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-.sparkle { color: var(--accent); }
 main { max-width: 1336px; margin: 0 auto; padding: 40px 48px; }
 .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 1.7px; text-transform: uppercase; color: #8a8497; }
 h1 { font-size: clamp(32px, 4vw, 40px); font-weight: 600; letter-spacing: -1px; margin: 0; line-height: 1.15; }
@@ -44,7 +43,7 @@ h2 { font-size: 13px; font-weight: 600; margin: 0; }
 .count { margin-left: auto; color: #a4a0ad; font-size: 11px; padding: 0 4px; }
 .column-description { margin: 7px 0 0 15px; color: #92909b; font-size: 11px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 33px; }
 .task-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-.card { position: relative; border: 1px solid #e4e4eb; border-radius: 10px; background: white; padding: 15px 14px 10px; box-shadow: 0 2px 3px #22223002; transition: box-shadow .15s, border-color .15s; }
+.card { position: relative; border: 1px solid #e4e4eb; border-radius: 10px; background: white; padding: 15px 14px; box-shadow: 0 2px 3px #22223002; transition: box-shadow .15s, border-color .15s; }
 .card:hover { border-color: #cdcadc; box-shadow: 0 4px 12px #22223005; }
 .card.just-added { animation: arrive .35s ease-out; }
 .task-main { display: flex; align-items: flex-start; gap: 10px; }
@@ -54,12 +53,9 @@ h2 { font-size: 13px; font-weight: 600; margin: 0; }
 .task-check:checked::after { content: ""; display: block; width: 8px; height: 4px; border-left: 1.5px solid white; border-bottom: 1.5px solid white; transform: translate(2.5px, 3px) rotate(-45deg); }
 .task-title { font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; cursor: pointer; flex: 1; }
 .card.done .task-title { color: #9792a1; text-decoration: line-through; }
-.card-footer { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 0 26px; min-height: 20px; gap: 5px; }
-.sort-source { color: #a39bac; font-size: 10px; }
-.sort-source .sparkle { margin-right: 4px; font-size: 10px; opacity: .7; }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 5px; background: transparent; color: #9a96a5; font-size: 21px; line-height: 1; }
 .icon-button:hover { color: #494151; background: #f1eff7; }
-.task-menu { position: relative; }
+.task-menu { position: relative; flex-shrink: 0; }
 .task-menu summary { list-style: none; width: 24px; height: 22px; font-size: 15px; cursor: pointer; color: #aaa3b3; text-align: center; border-radius: 4px; line-height: 15px; }
 .task-menu summary::-webkit-details-marker { display: none; }
 .task-menu summary:hover, .task-menu[open] summary { background: #f0edf7; color: #645b79; }

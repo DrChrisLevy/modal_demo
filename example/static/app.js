@@ -79,15 +79,6 @@ function taskCard(task) {
   const title = element('label', 'task-title', task.title);
   title.htmlFor = checkbox.id;
   checkbox.addEventListener('change', () => changeTask(task, `/api/tasks/${task.id}`, {method: 'PATCH', body: JSON.stringify({done: checkbox.checked})}, card));
-  main.append(checkbox, title);
-  const footer = element('div', 'card-footer');
-  const source = element('span', 'sort-source');
-  if (task.classification.status === 'sorted') {
-    source.append(element('span', 'sparkle', '✦'), document.createTextNode('Sorted by Jev'));
-    source.title = `Jev confidence: ${Math.round(task.classification.confidence * 100)}% · ${task.classification.duration_ms} ms`;
-  } else {
-    source.textContent = task.classification.status === 'manual' ? 'Placed by you' : task.classification.status === 'unavailable' ? 'Sorting unavailable' : 'Needs a label';
-  }
   const menu = element('details', 'task-menu');
   const summary = element('summary', '', '···');
   summary.setAttribute('aria-label', `Options for ${task.title}`);
@@ -100,15 +91,15 @@ function taskCard(task) {
   }
   select.value = task.label_id ?? '';
   select.addEventListener('change', () => changeTask(task, `/api/tasks/${task.id}`, {method: 'PATCH', body: JSON.stringify({label_id: select.value ? Number(select.value) : null})}, card));
-  const retry = element('button', '', '✦ Sort again with Jev'); retry.type = 'button';
+  const retry = element('button', '', 'Sort again'); retry.type = 'button';
   retry.addEventListener('click', () => {
     $('sort-status').textContent = 'Jev is finding a place for this task…';
     changeTask(task, `/api/tasks/${task.id}/sort`, {method: 'POST'}, card);
   });
   const remove = element('button', 'delete', 'Delete task'); remove.type = 'button';
   remove.addEventListener('click', () => changeTask(task, `/api/tasks/${task.id}`, {method: 'DELETE'}, card));
-  content.append(moveLabel, select, retry, remove); menu.append(summary, content); footer.append(source, menu);
-  card.append(main, footer);
+  content.append(moveLabel, select, retry, remove); menu.append(summary, content);
+  main.append(checkbox, title, menu); card.append(main);
   return card;
 }
 
