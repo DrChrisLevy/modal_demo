@@ -219,8 +219,9 @@ def value_of(value: Any, *names: str) -> Any:
     raise AssertionError(f"None of {names!r} are present on {type(value).__name__}")
 
 
+@pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Keep every real-model capability in one xdist worker process."""
+    """Assign affinity groups before xdist reads them for scheduling."""
 
     for item in items:
         groups = list(item.iter_markers("xdist_group"))
