@@ -1,19 +1,86 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
 [project]
-name = "tiny-task-board"
+name = "modal-native-test-stack-poc"
 version = "0.1.0"
-description = "An ordinary Docker Compose app, independent of Modal"
-requires-python = ">=3.12,<3.14"
+description = "Fieldwork: a multimodal asset workspace"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Chris Levy" }]
 dependencies = [
+  "asyncpg>=0.30,<1",
   "fastapi>=0.116,<1",
-  "uvicorn>=0.35,<1",
-  "psycopg[binary]>=3.2,<4",
+  "huggingface-hub>=0.34,<1",
+  "httpx>=0.28,<1",
+  "librosa>=0.11,<1",
+  "numpy>=2.1,<3",
+  "opensearch-py[async]>=3.0,<4",
+  "pillow>=11,<13",
+  "pydantic-settings>=2.10,<3",
+  "python-multipart>=0.0.20,<1",
+  "redis>=6,<7",
+  "safetensors>=0.5,<1",
+  "sentence-transformers>=5,<6",
+  "soundfile>=0.13,<1",
+  "torch==2.13.0",
+  "torchvision==0.28.0",
+  "transformers>=4.53,<5",
+  "uvicorn[standard]>=0.35,<1",
+]
+[dependency-groups]
+dev = [
+  "coverage[toml]>=7.10,<8",
+  "pytest>=8.4,<9",
+  "pytest-asyncio>=1.1,<2",
+  "pytest-cov>=6.2,<7",
+  "pytest-xdist>=3.8,<4",
+  "ruff>=0.12,<1",
 ]
 
-[dependency-groups]
-dev = ["pytest>=8.4,<9", "httpx>=0.28,<1", "ruff>=0.12,<1"]
-
-[tool.uv]
-package = false
+[tool.hatch.build.targets.wheel]
+packages = ["src/modal_native_test_stack_poc"]
 
 [tool.pytest.ini_options]
+addopts = "-ra --strict-markers --cov=modal_native_test_stack_poc --cov-report=term-missing --cov-fail-under=80"
+asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+  "model: executes one or more real Hugging Face models",
+  "services: requires real PostgreSQL, Redis, or OpenSearch",
+  "e2e: exercises the complete application pipeline",
+  "slow: intentionally expensive remote test",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["modal_native_test_stack_poc"]
+parallel = true
+omit = ["*/modal_native_test_stack_poc/seed.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 80
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+torchvision = [
+  { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

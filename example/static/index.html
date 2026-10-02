@@ -1,86 +1,282 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Tiny Task Board</title>
-  <style>
-    :root { font-family: ui-sans-serif, system-ui, sans-serif; color: #18302b; background: #f4f5ef; }
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 64px 24px; }
-    main { max-width: 720px; margin: auto; }
-    .eyebrow { font: 12px ui-monospace, monospace; letter-spacing: 2px; text-transform: uppercase; }
-    h1 { font-size: clamp(36px, 7vw, 58px); letter-spacing: -2px; margin: 16px 0; }
-    .intro { color: #596d65; line-height: 1.6; margin-bottom: 32px; }
-    form { display: flex; gap: 10px; }
-    input[type=text] { flex: 1; min-width: 0; padding: 14px; border: 1px solid #c9d4c8; border-radius: 8px; font: inherit; }
-    button { padding: 12px 18px; border: 0; border-radius: 8px; background: #1c5441; color: white; font: inherit; cursor: pointer; }
-    button:disabled { opacity: .5; cursor: wait; }
-    button:focus-visible, input:focus-visible { outline: 3px solid #8ccca5; outline-offset: 3px; }
-    ul { list-style: none; padding: 0; margin-top: 24px; }
-    li { display: flex; gap: 14px; align-items: center; background: white; padding: 20px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #e0e6dd; }
-    li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
-    input[type=checkbox] { width: 20px; height: 20px; accent-color: #1c5441; }
-    li.done label { text-decoration: line-through; color: #819188; }
-    #empty, footer { color: #748379; font-size: 14px; margin-top: 28px; }
-    #error { color: #a03326; min-height: 1.4em; }
-  </style>
-</head>
-<body>
-<main>
-  <div class="eyebrow">A small place to start</div>
-  <h1>Tiny Task Board</h1>
-  <p class="intro">Make a little progress. Add a task, check it off, come back for the next one.</p>
-  <form id="add-form">
-    <input id="title" type="text" aria-label="New task" placeholder="What needs doing?" maxlength="200" required>
-    <button type="submit">Add task</button>
-  </form>
-  <p id="error" role="alert"></p>
-  <ul id="tasks" aria-label="Tasks"></ul>
-  <p id="empty" hidden>Nothing here yet. Make room for your first task.</p>
-  <footer>Your tasks are saved when you come back.</footer>
-</main>
-<script>
-  const list = document.querySelector('#tasks');
-  const error = document.querySelector('#error');
-  async function request(path, options = {}) {
-    const response = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...options});
-    if (!response.ok) throw new Error('Something went wrong. Please try again.');
-    return response.json();
-  }
-  async function refresh() {
-    const tasks = await request('/api/tasks');
-    list.replaceChildren();
-    document.querySelector('#empty').hidden = tasks.length > 0;
-    for (const task of tasks) {
-      const row = document.createElement('li');
-      row.className = task.done ? 'done' : '';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox'; checkbox.checked = task.done; checkbox.id = `task-${task.id}`;
-      const label = document.createElement('label');
-      label.htmlFor = checkbox.id; label.textContent = task.title;
-      checkbox.addEventListener('change', async () => {
-        checkbox.disabled = true; error.textContent = '';
-        try {
-          await request(`/api/tasks/${task.id}`, {method: 'PATCH', body: JSON.stringify({done: checkbox.checked})});
-          await refresh();
-        } catch (e) { checkbox.checked = !checkbox.checked; error.textContent = e.message; }
-        finally { checkbox.disabled = false; }
-      });
-      row.append(checkbox, label); list.append(row);
-    }
-  }
-  document.querySelector('#add-form').addEventListener('submit', async event => {
-    event.preventDefault(); error.textContent = '';
-    const input = document.querySelector('#title');
-    const button = event.target.querySelector('button'); button.disabled = true;
-    try {
-      await request('/api/tasks', {method: 'POST', body: JSON.stringify({title: input.value})});
-      input.value = ''; await refresh(); input.focus();
-    } catch (e) { error.textContent = e.message; }
-    finally { button.disabled = false; }
-  });
-  refresh().catch(e => { error.textContent = e.message; });
-</script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f4ef" />
+    <title>Fieldwork — Multimodal workspace</title>
+    <link rel="icon" href="/static/mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Fieldwork home"
+        ><img
+          src="/static/mark.svg"
+          alt=""
+          width="34"
+          height="34"
+        />Fieldwork<span>LAB</span></a
+      >
+      <div class="sidebar-label">YOUR WORKSPACE</div>
+      <nav aria-label="Workspace">
+        <a href="#studio" class="nav-link active"
+          ><span aria-hidden="true">◈</span> Analysis studio</a
+        >
+        <a href="#library" class="nav-link"
+          ><span aria-hidden="true">▤</span> Asset library</a
+        >
+        <a href="#models" class="nav-link"
+          ><span aria-hidden="true">⌘</span> Models</a
+        >
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="small-mark">F</div>
+        <div>One place for your ideas.<small>Text. Images. Audio.</small></div>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <span
+          >Workspace <span class="slash">/</span>
+          <strong>Multimodal lab</strong></span
+        ><a href="/docs" target="_blank" rel="noopener"
+          >API docs <span aria-hidden="true">↗</span></a
+        >
+      </header>
+      <main>
+        <section id="studio" aria-labelledby="studio-title">
+          <div class="page-heading">
+            <div>
+              <div class="eyebrow">MAKE SENSE OF YOUR CONTENT</div>
+              <h1 id="studio-title">A fresh perspective.</h1>
+              <p>
+                Turn text, images, and audio into something you can explore.
+              </p>
+            </div>
+            <div id="health-status" class="status" role="status">
+              <i></i>Checking services
+            </div>
+          </div>
+          <div class="studio-grid">
+            <section class="card input-card" aria-labelledby="input-title">
+              <div class="card-heading">
+                <h2 id="input-title">Start with something</h2>
+                <span class="step">01 / INPUT</span>
+              </div>
+              <div class="tabs" role="tablist" aria-label="Content type">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="text-panel"
+                  id="text-tab"
+                  data-kind="text"
+                >
+                  <span aria-hidden="true">Tt</span> Text
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="image-panel"
+                  id="image-tab"
+                  data-kind="image"
+                  tabindex="-1"
+                >
+                  <span aria-hidden="true">▧</span> Image
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="audio-panel"
+                  id="audio-tab"
+                  data-kind="audio"
+                  tabindex="-1"
+                >
+                  <span aria-hidden="true">≋</span> Audio
+                </button>
+              </div>
+              <form id="analyze-form">
+                <label for="asset-title"
+                  >Give it a name <span class="optional">optional</span></label
+                >
+                <input
+                  id="asset-title"
+                  name="title"
+                  maxlength="200"
+                  placeholder="Something worth remembering"
+                />
+                <div id="text-panel" role="tabpanel" aria-labelledby="text-tab">
+                  <div class="field-heading">
+                    <label for="text-input">Your text</label
+                    ><button
+                      id="load-example"
+                      class="text-button"
+                      type="button"
+                    >
+                      Try an example ↗
+                    </button>
+                  </div>
+                  <textarea
+                    id="text-input"
+                    name="text"
+                    rows="8"
+                    maxlength="20000"
+                    placeholder="A review, a story, a spark of an idea…"
+                    required
+                  ></textarea>
+                  <div class="input-note">
+                    <span>Sentiment · Entities · Summary · Embedding</span
+                    ><span id="char-count">0 / 20,000</span>
+                  </div>
+                </div>
+                <div
+                  id="image-panel"
+                  role="tabpanel"
+                  aria-labelledby="image-tab"
+                  hidden
+                >
+                  <label class="upload-zone" for="image-input"
+                    ><span class="upload-symbol" aria-hidden="true">▧</span
+                    ><strong>Bring an image into focus</strong
+                    ><span>Choose a file or drop it here</span
+                    ><small>JPEG, PNG, WebP · up to 25 MB</small
+                    ><input
+                      id="image-input"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                  /></label>
+                  <img
+                    id="image-preview"
+                    class="media-preview"
+                    alt="Selected image preview"
+                    hidden
+                  />
+                  <p class="input-note">Image labels · Visual embedding</p>
+                </div>
+                <div
+                  id="audio-panel"
+                  role="tabpanel"
+                  aria-labelledby="audio-tab"
+                  hidden
+                >
+                  <label class="upload-zone" for="audio-input"
+                    ><span class="upload-symbol" aria-hidden="true">≋</span
+                    ><strong>Give your audio a voice</strong
+                    ><span>Choose a file or drop it here</span
+                    ><small>WAV, MP3, FLAC, OGG · up to 25 MB</small
+                    ><input
+                      id="audio-input"
+                      type="file"
+                      accept="audio/wav,audio/mpeg,audio/flac,audio/ogg,audio/x-wav"
+                  /></label>
+                  <audio
+                    id="audio-preview"
+                    class="media-preview"
+                    controls
+                    hidden
+                  ></audio>
+                  <p class="input-note">
+                    English transcription · Searchable transcript
+                  </p>
+                </div>
+                <p id="file-name" class="file-name" hidden></p>
+                <p id="form-error" class="error" role="alert" hidden></p>
+                <button
+                  id="analyze-button"
+                  class="primary-button"
+                  type="submit"
+                >
+                  Analyze &amp; save <span aria-hidden="true">↗</span>
+                </button>
+                <p class="form-footnote">
+                  Saved to your library. Ready to discover again.
+                </p>
+              </form>
+            </section>
+            <section
+              class="card result-card"
+              aria-labelledby="result-title"
+              aria-busy="false"
+            >
+              <div class="card-heading">
+                <h2 id="result-title">A closer look</h2>
+                <span class="step">02 / INSIGHTS</span>
+              </div>
+              <div id="results" aria-live="polite">
+                <div class="empty-result">
+                  <div class="orbit" aria-hidden="true">
+                    <span>✳</span><i></i><b></b>
+                  </div>
+                  <h3>There’s more to the story.</h3>
+                  <p>
+                    Add a piece of content to uncover its<br />meaning, mood,
+                    and connections.
+                  </p>
+                  <div class="capability-tags">
+                    <span>Understand</span><span>Organize</span
+                    ><span>Discover</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+        <section
+          id="library"
+          class="library-section"
+          aria-labelledby="library-title"
+        >
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">COLLECTED & CONNECTED</div>
+              <h2 id="library-title">Your asset library</h2>
+              <p>A growing collection of things you’ve explored.</p>
+            </div>
+            <button type="button" id="refresh-library" class="secondary-button">
+              Refresh <span aria-hidden="true">↻</span>
+            </button>
+          </div>
+          <form id="search-form" class="search-form" role="search">
+            <span aria-hidden="true">⌕</span
+            ><input
+              id="search-input"
+              aria-label="Search your assets"
+              placeholder="Search by meaning, keyword, or idea…"
+              maxlength="20000"
+            /><button type="submit">
+              Search <span aria-hidden="true">↗</span>
+            </button>
+          </form>
+          <p id="library-status" class="library-status" role="status">
+            Loading your library…
+          </p>
+          <div id="asset-list" class="asset-grid"></div>
+        </section>
+        <section
+          id="models"
+          class="models-section"
+          aria-labelledby="models-title"
+        >
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">BEHIND THE INSIGHTS</div>
+              <h2 id="models-title">Seven different perspectives.</h2>
+              <p>Specialist models for words, pictures, and sound.</p>
+            </div>
+            <span id="model-count" class="model-count">Loading models</span>
+          </div>
+          <div id="model-list" class="model-grid"></div>
+        </section>
+        <footer>
+          <a class="footer-brand" href="#studio">✳ Fieldwork</a
+          ><span>A small lab for bigger ideas.</span
+          ><a href="/docs">Explore the API ↗</a>
+        </footer>
+      </main>
+    </div>
+  </body>
 </html>

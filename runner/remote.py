@@ -11,6 +11,7 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import quote
 from uuid import uuid4
 
 import modal
@@ -56,18 +57,26 @@ class VM:
         self.output = Path(state["output"])
 
     @classmethod
-    def create(cls, image):
+    def create(cls, image, *, prepare=False):
         token = subprocess.check_output(["gh", "auth", "token"], text=True).strip()
+        model_volume = modal.Volume.from_name(
+            os.environ["RUN_MODEL_VOLUME"], create_if_missing=True
+        )
         sandbox = modal.Sandbox.create(
             "bash",
             "-c",
             BOOT,
             app=modal.App.lookup("modal-compose-demo", create_if_missing=True),
             image=image,
-            env={"COMPOSE_PROJECT_NAME": Path(DIRECTORY).name, "APP_PORT": str(PORT)},
+            env={
+                "COMPOSE_PROJECT_NAME": Path(DIRECTORY).name,
+                "APP_PORT": str(PORT),
+                "MODELS_DIR": "/models",
+            },
+            volumes={"/models": model_volume.with_mount_options(read_only=not prepare)},
             runtime="vm",
-            cpu=2,
-            memory=4096,
+            cpu=float(os.environ["RUN_CPU"]),
+            memory=int(os.environ["RUN_MEMORY"]),
             timeout=3600,
             encrypted_ports=[PORT],
             secrets=[modal.Secret.from_dict({"GH_TOKEN": token})],
@@ -216,16 +225,28 @@ def prepared_image():
 
 
 def load_or_prepare_image():
+    global REF
+    # Resolve branches once so preparation and the app use exactly the same source.
+    REF = subprocess.check_output(
+        ["gh", "api", f"repos/{REPO}/commits/{quote(REF, safe='')}", "--jq", ".sha"],
+        text=True,
+    ).strip()
+    image = tools_image()
     if PREPARED.exists():
         cached = json.loads(PREPARED.read_text())
         if cached["expires_at"] > time.time():
-            return modal.Image.from_id(cached["image_id"])
+            image = modal.Image.from_id(cached["image_id"])
+            volume = modal.Volume.from_name(os.environ["RUN_MODEL_VOLUME"], create_if_missing=True)
+            volume.hydrate()
+            if cached.get("ref") == REF and cached.get("volume_id") == volume.object_id:
+                return image
     print("Preparing Docker once for subsequent VMs...", flush=True)
     with modal.enable_output():
-        vm = VM.create(tools_image())
+        vm = VM.create(image, prepare=True)
     try:
         vm.checkout()
         vm.run("docker compose pull --ignore-buildable && docker compose build")
+        vm.run(os.environ["RUN_PREPARE"])
         vm.run("rm -rf /workspace/repo /root/.config/gh /root/.gitconfig", cwd="/workspace")
         vm.run(
             "kill -TERM $(cat /var/run/docker.pid); "
@@ -234,7 +255,17 @@ def load_or_prepare_image():
             cwd="/workspace",
         )
         image = vm.sandbox.snapshot_filesystem(timeout=180, ttl=7 * 24 * 3600)
-        save(PREPARED, {"image_id": image.object_id, "expires_at": time.time() + 7 * 24 * 3600})
+        volume = modal.Volume.from_name(os.environ["RUN_MODEL_VOLUME"])
+        volume.hydrate()
+        save(
+            PREPARED,
+            {
+                "image_id": image.object_id,
+                "expires_at": time.time() + 7 * 24 * 3600,
+                "ref": REF,
+                "volume_id": volume.object_id,
+            },
+        )
         return image
     finally:
         vm.stop()
@@ -250,7 +281,7 @@ def up():
             vm = VM.create(prepared_image())
         try:
             vm.checkout()
-            vm.run("docker compose up --build --wait --wait-timeout 120")
+            vm.run("docker compose up --build --wait --wait-timeout 300")
             vm.state["url"] = vm.sandbox.tunnels(timeout=60)[PORT].url
             vm.record()
         except BaseException:
@@ -307,7 +338,7 @@ def main():
         / REPO.replace("/", "--")
     )
     ACTIVE = CACHE / "sessions" / f"{NAME}.json"
-    PREPARED = CACHE / f"prepared-codex-{CODEX_VERSION}.json"
+    PREPARED = CACHE / f"prepared-models-codex-{CODEX_VERSION}.json"
     ACTIVE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     if sys.argv[1] == "list":
         list_running()

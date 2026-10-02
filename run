@@ -4,6 +4,9 @@ cd "$(dirname "$0")"
 
 export RUN_REPO="${RUN_REPO:-DrChrisLevy/modal_demo}" RUN_REF="${RUN_REF:-main}"
 export RUN_DIRECTORY=example RUN_PORT=8000
+export RUN_CPU="${RUN_CPU:-4}" RUN_MEMORY="${RUN_MEMORY:-16384}"
+export RUN_MODEL_VOLUME="${RUN_MODEL_VOLUME:-modal-compose-demo-models}"
+export RUN_PREPARE='docker compose run --build --rm seed'
 
 local_setup() {
   # A stable default keeps each worktree's containers and database separate.
@@ -26,11 +29,12 @@ local_up() {
     fi
   fi
   export APP_PORT
+  bash -c "$RUN_PREPARE"
   docker compose up --build --wait
   echo "http://localhost:$APP_PORT"
 }
 
-tests='docker compose exec -T web uv run --frozen pytest -q && docker compose exec -T web uv run --frozen ruff check .'
+tests='docker compose exec -T web uv run --frozen pytest -q && docker compose exec -T web uv run --frozen ruff check . && docker compose exec -T web uv run --frozen ruff format --check src tests'
 action="${1:-help}"
 target="${2:-local}"
 case "$action" in

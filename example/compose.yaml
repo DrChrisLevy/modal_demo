@@ -1,32 +1,86 @@
+x-app: &app
+  build: .
+  image: ${COMPOSE_PROJECT_NAME:-fieldwork}-web
+
 services:
   web:
-    build: .
+    <<: *app
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:
-      DATABASE_URL: postgresql://demo:demo@db:5432/tasks
+      MULTIMODAL_MODELS_LOCK_PATH: /app/models.lock.json
+      MULTIMODAL_POSTGRES_URL: postgresql://postgres:postgres@postgres:5432/multimodal
+      MULTIMODAL_REDIS_URL: redis://redis:6379/0
+      MULTIMODAL_OPENSEARCH_URL: http://opensearch:9200
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_HOME: /tmp/huggingface
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      TOKENIZERS_PARALLELISM: "false"
     volumes:
       - .:/app
+      - ${MODELS_DIR:-models}:/models:ro
     depends_on:
-      db:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      opensearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "uv", "run", "--frozen", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 2s
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 5s
       timeout: 5s
-      retries: 30
-  db:
+      retries: 60
+  seed:
+    <<: *app
+    profiles: [setup]
+    command: ["python", "-m", "modal_native_test_stack_poc.seed"]
+    environment:
+      HF_HOME: /models/.cache
+    volumes:
+      - ${MODELS_DIR:-models}:/models
+  postgres:
     image: public.ecr.aws/docker/library/postgres:17.5-bookworm
     environment:
-      POSTGRES_USER: demo
-      POSTGRES_PASSWORD: demo
-      POSTGRES_DB: tasks
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: multimodal
     volumes:
-      - data:/var/lib/postgresql/data
+      - postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U demo -d tasks"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d multimodal"]
       interval: 2s
       timeout: 3s
       retries: 30
+  redis:
+    image: public.ecr.aws/docker/library/redis:8.0.3-bookworm
+    command: [redis-server, --save, "", --appendonly, "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  opensearch:
+    image: public.ecr.aws/opensearchproject/opensearch:2.19.1
+    environment:
+      discovery.type: single-node
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - opensearch:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=1s' >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
 volumes:
-  data:
+  models:
+  postgres:
+  opensearch:
