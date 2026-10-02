@@ -7,9 +7,16 @@ tests, and give coding agents isolated development environments.
 The app in [`example/`](example/) is a small task board backed by FastAPI and
 PostgreSQL. Add a task and [Jev](https://docs.typesafe.ai/primitives/choice) sorts
 it into one of your labels. Edit label names and descriptions on the page; the
-next task uses the updated labels. You can also move tasks manually, sort them
-again, and check them off. Tasks that do not fit a label, or cannot be classified
+next task uses the updated labels. Adding or editing a label also rechecks unfinished
+Unsorted tasks against all current labels, with up to four classifications in parallel.
+Already categorized and completed tasks stay put; deleting or reordering labels alone
+does not trigger re-sorting. You can also move tasks manually, sort them again, and
+check them off. Tasks that do not fit a label, or cannot be classified
 because Jev is unavailable, stay in Unsorted.
+
+Sorting uses Jev's Choice result, including an explicit no-match option. Probabilities
+are stored with the task; there is no additional confidence threshold. Results are
+discarded if the task or labels change while a re-sort is running.
 
 ## Set up for Modal
 

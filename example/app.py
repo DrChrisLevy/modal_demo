@@ -1,6 +1,7 @@
 """A small task board: PostgreSQL persistence and Jev-powered sorting."""
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -66,9 +67,11 @@ async def lifespan(app):
         if api_key
         else None
     )
+    app.state.sorting_pool = ThreadPoolExecutor(max_workers=4)
     try:
         yield
     finally:
+        app.state.sorting_pool.shutdown(wait=True)
         if app.state.jev is not None:
             app.state.jev.close()
 
@@ -141,6 +144,31 @@ def existing_label(connection, label_id):
     return None
 
 
+def sort_unsorted(labels):
+    with database() as connection:
+        tasks = connection.execute(
+            "SELECT id, title, xmin::text AS version FROM tasks WHERE label_id IS NULL AND NOT done"
+        ).fetchall()
+
+    def sort_and_apply(task):
+        label_id, classification = sort_task(task["title"], labels, app.state.jev)
+        if classification["status"] == "unavailable":
+            return
+        with database() as connection:
+            # Hold locks only while applying a result, never during the API call.
+            connection.execute("LOCK TABLE labels IN SHARE MODE")
+            if read_labels(connection) != labels:
+                return  # Another save changed the categories used for this answer.
+            connection.execute(
+                "UPDATE tasks SET label_id = %s, classification = %s "
+                "WHERE id = %s AND label_id IS NULL AND NOT done AND xmin::text = %s",
+                (label_id, Jsonb(classification), task["id"], task["version"]),
+            )
+
+    # The shared pool bounds re-sorting across simultaneous label saves, too.
+    list(app.state.sorting_pool.map(sort_and_apply, tasks))
+
+
 @app.get("/")
 def index():
     return FileResponse(ROOT / "static" / "index.html")
@@ -163,10 +191,16 @@ def list_labels():
 def save_labels(payload: LabelList):
     with database() as connection:
         connection.execute("LOCK TABLE labels IN SHARE ROW EXCLUSIVE MODE")
-        current = {row["id"] for row in read_labels(connection)}
+        current = {row["id"]: row for row in read_labels(connection)}
         retained = {label.id for label in payload.labels if label.id is not None}
-        if not retained <= current:
+        if not retained <= current.keys():
             raise HTTPException(409, "Labels changed in another window. Reopen the editor.")
+        changed = any(
+            label.id is None
+            or (label.name, label.description)
+            != (current[label.id]["name"], current[label.id]["description"])
+            for label in payload.labels
+        )
         for position, label in enumerate(payload.labels):
             if label.id is None:
                 connection.execute(
@@ -178,9 +212,12 @@ def save_labels(payload: LabelList):
                     "UPDATE labels SET name = %s, description = %s, position = %s WHERE id = %s",
                     (label.name, label.description, position, label.id),
                 )
-        for removed in current - retained:
+        for removed in current.keys() - retained:
             connection.execute("DELETE FROM labels WHERE id = %s", (removed,))
-        return read_labels(connection)
+        labels = read_labels(connection)
+    if changed:
+        sort_unsorted(labels)
+    return labels
 
 
 @app.get("/api/tasks")

@@ -129,6 +129,46 @@ def test_unknown_label_id_is_rejected(api):
     assert api.get("/api/labels").json() == before
 
 
+def test_new_label_resorts_only_unfinished_unsorted_tasks(api, task_factory):
+    original = api.get("/api/labels").json()
+    music_tasks = [
+        task_factory("Compose the chorus for my new song"),
+        task_factory("Mix the vocals for my new album"),
+    ]
+    completed = task_factory("Record a guitar solo for my album")
+    vague = task_factory("asdf qwer zxcv")
+    placed = task_factory("Write lyrics for my song")
+    for task in [*music_tasks, completed, vague]:
+        assert api.patch(f"/api/tasks/{task['id']}", json={"label_id": None}).is_success
+    assert api.patch(f"/api/tasks/{completed['id']}", json={"done": True}).is_success
+    placed = api.patch(f"/api/tasks/{placed['id']}", json={"label_id": original[0]["id"]}).json()
+    try:
+        response = api.put(
+            "/api/labels",
+            json={
+                "labels": [
+                    *original,
+                    {"name": "Music", "description": "Writing songs, recording and mixing music."},
+                ]
+            },
+        )
+        assert response.status_code == 200, response.text
+        music = response.json()[-1]
+        tasks = {task["id"]: task for task in api.get("/api/tasks").json()}
+        for task in music_tasks:
+            sorted_task = tasks[task["id"]]
+            assert sorted_task["label_id"] == music["id"], sorted_task
+            assert sorted_task["classification"]["model"].startswith("jev-")
+            assert sorted_task["classification"]["probabilities"][f"label_{music['id']}"] > 0
+        assert tasks[vague["id"]]["label_id"] is None
+        assert tasks[vague["id"]]["classification"]["status"] == "unsorted"
+        assert tasks[completed["id"]]["label_id"] is None
+        assert tasks[completed["id"]]["done"] is True
+        assert tasks[placed["id"]] == placed
+    finally:
+        api.put("/api/labels", json={"labels": original})
+
+
 def test_delete_task(api, task_factory):
     task = task_factory("Pick up the dry cleaning")
     assert api.delete(f"/api/tasks/{task['id']}").status_code == 204

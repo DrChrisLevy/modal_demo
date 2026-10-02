@@ -15,15 +15,26 @@ from psycopg.conninfo import make_conninfo
 
 
 @pytest.fixture(scope="session")
-def api(tmp_path_factory):
-    if not os.getenv("TYPESAFE_API_KEY"):
-        pytest.fail(
-            "The integration suite requires TYPESAFE_API_KEY; no live Jev tests are skipped."
-        )
+def test_database():
     original = os.environ["DATABASE_URL"]
     name = f"task_board_test_{uuid4().hex}"
     with psycopg.connect(original, autocommit=True) as connection:
         connection.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+    try:
+        yield make_conninfo(original, dbname=name)
+    finally:
+        with psycopg.connect(original, autocommit=True) as connection:
+            connection.execute(
+                sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(name))
+            )
+
+
+@pytest.fixture(scope="session")
+def api(tmp_path_factory, test_database):
+    if not os.getenv("TYPESAFE_API_KEY"):
+        pytest.fail(
+            "The integration suite requires TYPESAFE_API_KEY; no live Jev tests are skipped."
+        )
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
@@ -42,7 +53,7 @@ def api(tmp_path_factory):
                     "--port",
                     str(port),
                 ],
-                env={**os.environ, "DATABASE_URL": make_conninfo(original, dbname=name)},
+                env={**os.environ, "DATABASE_URL": test_database},
                 stdout=log,
                 stderr=subprocess.STDOUT,
             )
@@ -66,10 +77,6 @@ def api(tmp_path_factory):
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
-        with psycopg.connect(original, autocommit=True) as connection:
-            connection.execute(
-                sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(name))
-            )
 
 
 @pytest.fixture

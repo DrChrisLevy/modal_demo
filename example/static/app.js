@@ -202,12 +202,18 @@ $('labels-form').addEventListener('submit', async event => {
     name: row.querySelector('input').value,
     description: row.querySelector('textarea').value,
   }));
-  savingLabels = true; $('save-labels').disabled = true;
+  savingLabels = true;
+  $('labels-form').querySelectorAll('input, textarea, button').forEach(control => { control.disabled = true; });
+  $('save-labels').textContent = 'Saving and sorting…';
   try {
     labels = await request('/api/labels', {method: 'PUT', body: JSON.stringify({labels: edited})});
-    tasks = await request('/api/tasks'); render(); $('labels-dialog').close(); $('sort-status').textContent = 'Labels saved. Jev will use them for new tasks.';
+    tasks = await request('/api/tasks'); render(); $('labels-dialog').close(); $('sort-status').textContent = 'Labels saved. Unsorted tasks checked against the updated labels.';
   } catch (error) { showError(error.message, 'labels-error'); }
-  finally { savingLabels = false; $('save-labels').disabled = false; updateLabelControls(); }
+  finally {
+    savingLabels = false;
+    $('labels-form').querySelectorAll('input, textarea, button').forEach(control => { control.disabled = false; });
+    $('save-labels').textContent = 'Save labels'; updateLabelControls();
+  }
 });
 
 document.addEventListener('click', event => {
