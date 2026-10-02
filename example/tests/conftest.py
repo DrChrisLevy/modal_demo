@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 import os
@@ -8,6 +9,7 @@ import wave
 from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
 
 import pytest
@@ -16,6 +18,32 @@ if TYPE_CHECKING:
     from fastapi.testclient import TestClient
 
     from modal_native_test_stack_poc.inference import ModelRegistry
+
+
+@pytest.fixture(scope="session", autouse=True)
+def isolated_database() -> Iterator[None]:
+    """Keep CLI test fixtures out of the running app's asset library."""
+    import asyncpg
+
+    original_url = os.environ["MULTIMODAL_POSTGRES_URL"]
+    database = f"fieldwork_test_{uuid4().hex}"
+
+    async def execute(command: str) -> None:
+        connection = await asyncpg.connect(original_url)
+        try:
+            await connection.execute(command)
+        finally:
+            await connection.close()
+
+    asyncio.run(execute(f'CREATE DATABASE "{database}"'))
+    os.environ["MULTIMODAL_POSTGRES_URL"] = urlunsplit(
+        urlsplit(original_url)._replace(path=f"/{database}")
+    )
+    try:
+        yield
+    finally:
+        os.environ["MULTIMODAL_POSTGRES_URL"] = original_url
+        asyncio.run(execute(f'DROP DATABASE "{database}" WITH (FORCE)'))
 
 
 @pytest.fixture(scope="session")
@@ -170,8 +198,15 @@ def api_client(
         cache_namespace=f"multimodal-tests:{testrun_uid}:{worker_id}:api",
     )
     app = create_app(settings=settings, service=build_service(settings, registry=registry))
-    with TestClient(app) as client:
-        yield client
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        import httpx
+
+        response = httpx.delete(f"{settings.opensearch_url}/{settings.opensearch_index}")
+        if response.status_code != 404:
+            response.raise_for_status()
 
 
 def value_of(value: Any, *names: str) -> Any:

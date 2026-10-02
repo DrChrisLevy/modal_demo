@@ -119,7 +119,8 @@ later starts reuse them. With Docker running:
 
 Tests exercise real models and services, the API, and the complete asset pipeline,
 and enforce at least 80% Python coverage. Missing integration dependencies fail
-the suite. `./run test` also checks Ruff lint and formatting. The app stores analysis
+the suite. Each test run uses a temporary database, leaving the app’s library
+untouched. `./run test` also checks Ruff lint and formatting. The app stores analysis
 and metadata; original image/audio uploads are not retained.
 
 With the Codex CLI installed locally:
