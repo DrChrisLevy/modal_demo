@@ -7,20 +7,10 @@ COMPOSE_SHA256 = "7af95166a730b87e172d4fc9aefea8725d3c6c7327d59149267b452114ddb7
 CODEX_VERSION = "0.155.1"
 CODEX_SHA256 = "a65b895c6ac1a73629bbe4b864640c86133e94a43b4d67b3103044e1a306d5a2"
 
-# The Modal VM runs its own Docker engine.
+# Modal's readiness probe waits for Docker. Keep the VM alive when Docker stops for a snapshot.
 BOOT = """
-# Start Docker, wait for it to be ready, then keep the VM alive.
-set -eu
-mkdir -p /workspace /artifacts
 dockerd --host unix:///var/run/docker.sock >/tmp/dockerd.log 2>&1 &
-for attempt in $(seq 1 120); do
-    if docker info >/dev/null 2>&1; then
-        exec sleep infinity
-    fi
-    sleep 1
-done
-cat /tmp/dockerd.log
-exit 1
+exec sleep infinity
 """
 
 
