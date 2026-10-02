@@ -4,23 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f7f8fa">
-  <title>Tiny Task Board · Sorted by Jev</title>
+  <title>Tasks</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/app.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/" aria-label="Tiny Task Board home">
-      <svg class="brand-mark" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect width="28" height="28" rx="8" fill="currentColor"/><path d="m8 14 4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Tiny Task Board</span>
-    </a>
-    <span class="powered"><span class="sparkle" aria-hidden="true">✦</span> Sorted by Jev</span>
-  </header>
   <main>
     <section class="intro" aria-labelledby="page-title">
-      <div class="eyebrow">A little less organizing</div>
-      <h1 id="page-title">Your day, sorted.</h1>
-      <p>Put it into words. Jev puts it in the right place.</p>
+      <h1 id="page-title">Tasks</h1>
     </section>
     <section class="capture" aria-label="Add a task">
       <form id="add-form">
@@ -28,10 +19,7 @@
         <input id="title" type="text" aria-label="New task" placeholder="What’s on your mind?" maxlength="200" autocomplete="off" required>
         <button id="add-button" class="primary" type="submit"><span>Add task</span><span aria-hidden="true">↵</span></button>
       </form>
-      <div class="capture-bottom">
-        <span><span class="sparkle" aria-hidden="true">✦</span> Automatically sorted into your labels</span>
-        <span id="sort-status" role="status" aria-live="polite"></span>
-      </div>
+      <span id="sort-status" class="sr-only" role="status" aria-live="polite"></span>
     </section>
     <div class="board-toolbar">
       <div class="views" role="group" aria-label="Task status">
@@ -58,7 +46,6 @@
         <button type="button">Learn how database indexes work</button>
       </div>
     </div>
-    <footer><span>Your tasks. Your labels. A little help from Jev.</span><span id="saved-status">Saved in your workspace</span></footer>
   </main>
   <dialog id="labels-dialog" aria-labelledby="labels-title">
     <form id="labels-form">

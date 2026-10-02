@@ -225,5 +225,5 @@ document.addEventListener('click', event => {
 
 Promise.all([request('/api/labels'), request('/api/tasks')]).then(([initialLabels, initialTasks]) => {
   labels = initialLabels; tasks = initialTasks; render();
-}).catch(error => { showError(error.message); $('saved-status').textContent = 'Could not connect to your workspace'; })
+}).catch(error => { showError(error.message); })
   .finally(() => { $('loading').hidden = true; });

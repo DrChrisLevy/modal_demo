@@ -6,7 +6,7 @@ import pytest
 def test_health_and_page(api):
     assert api.get("/health").json() == {"status": "ok", "database": "postgresql"}
     page = api.get("/")
-    assert page.status_code == 200 and "Tiny Task Board" in page.text
+    assert page.status_code == 200 and '<h1 id="page-title">Tasks</h1>' in page.text
     for asset in ("app.js", "style.css"):
         assert api.get(f"/static/{asset}").status_code == 200
 
