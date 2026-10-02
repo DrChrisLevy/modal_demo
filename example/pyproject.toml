@@ -44,7 +44,7 @@ dev = [
 packages = ["src/modal_native_test_stack_poc"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --strict-markers --cov=modal_native_test_stack_poc --cov-report=term-missing --cov-fail-under=80"
+addopts = "-ra -n 4 --dist loadgroup --strict-markers --cov=modal_native_test_stack_poc --cov-report=term-missing --cov-fail-under=80"
 asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = [

@@ -98,7 +98,7 @@ a new conversation; named VMs retain files between calls.
   Terminating the preparation VM commits the downloads before the app VM starts.
   The Volume persists when an environment is stopped. Only weights are shared;
   PostgreSQL, Redis, and OpenSearch remain isolated per VM.
-- Defaults are 4 CPUs and 16 GiB RAM. Override with `RUN_CPU`, `RUN_MEMORY` (MiB),
+- Defaults are 16 CPUs and 16 GiB RAM. Override with `RUN_CPU`, `RUN_MEMORY` (MiB),
   or choose another model Volume with `RUN_MODEL_VOLUME` when starting a VM.
 - Open the printed URL for the frontend, `/docs` for the interactive API, or
   `/health/ready` for service and model readiness.
@@ -119,8 +119,11 @@ later starts reuse them. With Docker running:
 
 Tests exercise real models and services, the API, and the complete asset pipeline,
 and enforce at least 80% Python coverage. Missing integration dependencies fail
-the suite. Each test run uses a temporary database, leaving the app’s library
-untouched. `./run test` also checks Ruff lint and formatting. The app stores analysis
+the suite. Pytest uses four xdist workers with `--dist loadgroup`, keeping the text,
+image, audio, and core tests in separate groups so workers reuse loaded models.
+Each process uses four OpenMP/MKL threads for model inference. Each worker uses a
+temporary database, leaving the app’s library untouched. For sequential debugging,
+pass `-n 0` to pytest. `./run test` also checks Ruff lint and formatting. The app stores analysis
 and metadata; original image/audio uploads are not retained.
 
 With the Codex CLI installed locally:

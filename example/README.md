@@ -10,3 +10,8 @@ Use `./run up` or `./run up remote NAME` from the repository root. Initial setup
 downloads model weights once; subsequent environments reuse them. Open the printed
 URL for the frontend, or `/docs` for the API. Use `./run test [remote NAME]` for
 the real model, service, API, and end-to-end tests plus Ruff.
+
+Tests default to four xdist workers grouped by text, image, audio, and core tests.
+Each process uses four OpenMP/MKL threads; remote VMs default to 16 vCPUs and 16 GiB
+RAM. Each worker has its own temporary database. Use `pytest -n 0` when debugging
+tests sequentially.

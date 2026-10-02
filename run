@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 
 export RUN_REPO="${RUN_REPO:-DrChrisLevy/modal_demo}" RUN_REF="${RUN_REF:-$(git rev-parse HEAD)}"
 export RUN_DIRECTORY=example RUN_PORT=8000
-export RUN_CPU="${RUN_CPU:-4}" RUN_MEMORY="${RUN_MEMORY:-16384}"
+export RUN_CPU="${RUN_CPU:-16}" RUN_MEMORY="${RUN_MEMORY:-16384}"
 export RUN_MODEL_VOLUME="${RUN_MODEL_VOLUME:-modal-compose-demo-models}"
 export RUN_PREPARE='docker compose run --build --rm seed'
 
