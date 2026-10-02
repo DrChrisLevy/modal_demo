@@ -1,6 +1,6 @@
 # Modal Compose Demo
 
-A small demo of using [Modal VM Sandboxes](https://modal.com/docs/guide/vm-sandboxes)
+A small demo of using [Modal VM Sandboxes](https://modal.com/docs/guide/sandboxes#runtimes)
 to run Docker Compose apps, execute
 tests, and give coding agents isolated development environments.
 
@@ -12,6 +12,7 @@ for building workflows around your own applications, tools, and pipelines.
 Requires `uv`, authenticated GitHub CLI (`gh auth login`),
 a [Modal account](https://modal.com/signup), and an OpenAI API key.
 
+VMs use the generally available `runtime="vm"` API in Modal SDK 1.6.0.
 Docker runs inside the Modal VM; no local Docker installation is needed.
 The Modal sandbox uses your local `gh` token with the same GitHub permissions.
 

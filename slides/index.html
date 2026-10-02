@@ -130,7 +130,7 @@ vol = modal.<span class="py-call">Volume</span>.<span class="py-call">from_name<
         <p class="sandbox-intro-purpose">We’ll use this to run our local development environment in the cloud.</p>
       </div>
       <footer class="code-footer">
-        <a href="https://modal.com/docs/guide/vm-sandboxes#vm-sandboxes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
+        <a href="https://modal.com/docs/guide/sandboxes#runtimes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
       </footer>
     </section>
 
@@ -261,7 +261,7 @@ vol = modal.<span class="py-call">Volume</span>.<span class="py-call">from_name<
     <span class="py-parameter">app</span>=modal.<span class="py-call">App</span>.<span class="py-call">lookup</span>(<span class="py-string">&quot;modal-compose-demo&quot;</span>, <span class="py-parameter">create_if_missing</span>=<span class="py-keyword">True</span>),
     <span class="py-parameter">image</span>=image,
     <span class="py-parameter">env</span>={<span class="py-string">&quot;COMPOSE_PROJECT_NAME&quot;</span>: <span class="py-call">Path</span>(<span class="py-constant">DIRECTORY</span>).name, <span class="py-string">&quot;APP_PORT&quot;</span>: <span class="py-call">str</span>(<span class="py-constant">PORT</span>)},
-    <span class="py-parameter">experimental_options</span>={<span class="py-string">&quot;vm_runtime&quot;</span>: <span class="py-keyword">True</span>},
+    <span class="py-parameter">runtime</span>=<span class="py-string">&quot;vm&quot;</span>,
     <span class="py-parameter">cpu</span>=<span class="py-number">2</span>,
     <span class="py-parameter">memory</span>=<span class="py-number">4096</span>,
     <span class="py-parameter">timeout</span>=<span class="py-number">3600</span>,
@@ -272,7 +272,7 @@ vol = modal.<span class="py-call">Volume</span>.<span class="py-call">from_name<
         </figure>
       </div>
       <footer class="code-footer">
-        <a href="https://modal.com/docs/guide/vm-sandboxes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
+        <a href="https://modal.com/docs/guide/sandboxes#runtimes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
       </footer>
       <!-- Source notes: Sandbox.create call from runner/remote.py, VM.create(), preserving all arguments and original line breaks. Surrounding method indentation is removed; token is obtained earlier with gh auth token. Python syntax spans are generated with the standard-library tokenizer. BOOT is defined in runner/image.py. -->
     </section>

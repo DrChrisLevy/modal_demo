@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Run an existing Docker Compose project in a Modal VM Sandbox"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "modal==1.5.5",
+    "modal==1.6.0",
     "python-dotenv>=1.2.3",
 ]
 
