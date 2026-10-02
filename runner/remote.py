@@ -104,19 +104,14 @@ class VM:
             workdir=cwd or f"/workspace/repo/{DIRECTORY}",
             timeout=timeout,
             secrets=secrets,
+            bufsize=1 if stream_agent else -1,
         )
         try:
             if stream_agent:
                 chunks = []
-                pending = ""
-                for chunk in process.stdout:
-                    chunks.append(chunk)
-                    pending += chunk
-                    while "\n" in pending:
-                        line, pending = pending.split("\n", 1)
-                        print_agent_event(line + "\n")
-                if pending:
-                    print_agent_event(pending)
+                for line in process.stdout:
+                    chunks.append(line)
+                    print_agent_event(line)
                 output = "".join(chunks)
             else:
                 output = process.stdout.read()
@@ -133,7 +128,11 @@ class VM:
         return output
 
     def checkout(self):
-        self.sandbox.wait_until_ready(timeout=180)
+        try:
+            self.sandbox.wait_until_ready(timeout=180)
+        except modal.exception.TimeoutError:
+            self.run("cat /tmp/dockerd.log", cwd="/workspace")
+            raise
         self.run("gh auth setup-git", cwd="/workspace")
         self.run(f"git clone -- https://github.com/{REPO}.git /workspace/repo", cwd="/workspace")
         self.run(
