@@ -98,7 +98,9 @@ a new conversation; named VMs retain files between calls.
   Terminating the preparation VM commits the downloads before the app VM starts.
   The Volume persists when an environment is stopped. Only weights are shared;
   PostgreSQL, Redis, and OpenSearch remain isolated per VM.
-- Defaults are 16 CPUs and 16 GiB RAM. Override with `RUN_CPU`, `RUN_MEMORY` (MiB),
+- Defaults are 16 physical CPU cores (32 logical CPUs) and 16 GiB RAM. Modal's
+  [`cpu` parameter counts physical cores](https://modal.com/docs/guide/sandbox-resources).
+  Override with `RUN_CPU`, `RUN_MEMORY` (MiB),
   or choose another model Volume with `RUN_MODEL_VOLUME` when starting a VM.
 - Open the printed URL for the frontend, `/docs` for the interactive API, or
   `/health/ready` for service and model readiness.
