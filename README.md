@@ -4,13 +4,18 @@ A small demo of using [Modal VM Sandboxes](https://modal.com/docs/guide/sandboxe
 to run Docker Compose apps, execute
 tests, and give coding agents isolated development environments.
 
-The app in [`example/`](example/) is a toy example. Use the demo as a starting point
-for building workflows around your own applications, tools, and pipelines.
+The app in [`example/`](example/) is a small task board backed by FastAPI and
+PostgreSQL. Add a task and [Jev](https://docs.typesafe.ai/primitives/choice) sorts
+it into one of your labels. Edit label names and descriptions on the page; the
+next task uses the updated labels. You can also move tasks manually, sort them
+again, and check them off. Tasks that do not fit a label, or cannot be classified
+because Jev is unavailable, stay in Unsorted.
 
 ## Set up for Modal
 
 Requires `uv`, authenticated GitHub CLI (`gh auth login`),
-a [Modal account](https://modal.com/signup), and an OpenAI API key.
+a [Modal account](https://modal.com/signup), a TypeSafe API key for Jev, and an
+OpenAI API key for Codex agent sessions.
 
 VMs use the generally available `runtime="vm"` API in Modal SDK 1.6.0.
 Docker runs inside the Modal VM; no local Docker installation is needed.
@@ -21,15 +26,21 @@ uv sync --frozen
 uv run modal setup  # skip if already authenticated
 ```
 
-Add your OpenAI API key to a `.env` file in the repo root:
+Add your keys to a `.env` file in the repo root (see `.env.example`):
 
 ```dotenv
 OPENAI_API_KEY=your-openai-api-key-here
+TYPESAFE_API_KEY=your-typesafe-api-key-here
 ```
+
+Local Compose and remote VMs receive only the app keys listed in `RUN_APP_ENV`.
+The TypeSafe key stays on the backend. Jev is called through the TypeSafe API;
+there are no local models or model-weight downloads.
 
 ## Run on Modal
 
 New VMs clone `RUN_REPO` at `RUN_REF`, set at the top of `run`.
+The default ref is the checked-out commit; `RUN_REF=main` explicitly selects main.
 Commit and push application changes before starting a new VM to include them.
 
 `demo` below is a name you choose for the remote environment. Replace it with
@@ -94,6 +105,11 @@ Local runs require Docker Compose. With Docker running:
 ./run down            # stop containers; keep the database
 ./run down --volumes  # stop containers and delete the database
 ```
+
+Tests run a separate API server against a temporary PostgreSQL database, so your
+preview tasks and labels are untouched. The integration suite calls real Jev and
+requires `TYPESAFE_API_KEY`; service failures and no-match answers have separate
+unit tests. GitHub Actions also needs a `TYPESAFE_API_KEY` repository secret.
 
 With the Codex CLI installed locally:
 
