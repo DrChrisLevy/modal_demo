@@ -36,10 +36,10 @@ OPENAI_API_KEY=your-openai-api-key-here
 
 ## Run on Modal
 
-New VMs clone `RUN_REPO` at `RUN_REF`, set at the top of `run`.
+New VMs clone the currently checked-out commit from `RUN_REPO`.
 Commit and push application changes before starting a new VM to include them.
-For a branch, use `RUN_REF=your-branch ./run up remote demo`; the runner resolves it
-to a commit so the build and app use the same source.
+To explicitly choose another revision, use `RUN_REF=your-branch ./run up remote demo`;
+the runner resolves it to a commit so the build and app use the same source.
 
 `demo` below is a name you choose for the remote environment. Replace it with
 your own name, such as `feature-a`, and use that name in subsequent commands.
