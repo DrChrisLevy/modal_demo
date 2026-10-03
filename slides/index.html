@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Modal VM Sandboxes · Chris Levy</title>
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
   <script src="presentation.js" defer></script>
 </head>
 <body>
@@ -424,30 +424,21 @@ image = sandbox.<span class="py-call">snapshot_filesystem</span>(<span class="py
       <!-- Excerpt from .github/workflows/ci.yml. Job fields and steps are verbatim, dedented for display; workflow name, contents: read permission and jobs/test wrapper omitted. GitHub Actions orchestrates; tests run in the Modal VM. -->
     </section>
 
-    <section class="slide takeaway-slide" aria-labelledby="slide-17-title" aria-roledescription="slide" hidden>
+    <section class="slide resources-slide" aria-labelledby="slide-17-title" aria-roledescription="slide" hidden>
       <header class="content-heading">
-        <h2 id="slide-17-title">Same workflow.<br>More places to run it.</h2>
+        <h2 id="slide-17-title">Build it for your workflow</h2>
       </header>
-      <div class="closing-content">
-        <p>Keep your existing Docker Compose setup.</p>
-        <p>Give each task its own cloud environment.</p>
-        <p>Let developers and agents use the same app and tests.</p>
+      <div class="resources-content">
+        <div class="resources-takeaways">
+          <p>Keep your existing Docker Compose setup.</p>
+          <p>Give each task its own cloud environment.</p>
+          <p>Let developers and agents use the same app and tests.</p>
+        </div>
+        <p>Explore the docs: <a href="https://modal.com/docs" target="_blank" rel="noopener noreferrer">modal.com/docs ↗</a></p>
+        <p>Point your agents at <a href="https://modal.com/llms.txt" target="_blank" rel="noopener noreferrer">modal.com/llms.txt ↗</a></p>
       </div>
       <footer class="code-footer">
         <a href="https://github.com/DrChrisLevy/modal_demo" target="_blank" rel="noopener noreferrer">github.com/DrChrisLevy/modal_demo ↗</a>
-      </footer>
-    </section>
-
-    <section class="slide resources-slide" aria-labelledby="slide-18-title" aria-roledescription="slide" hidden>
-      <header class="content-heading">
-        <h2 id="slide-18-title">Build it for your workflow</h2>
-      </header>
-      <div class="resources-content">
-        <p>Explore the docs: <a href="https://modal.com/docs" target="_blank" rel="noopener noreferrer">modal.com/docs ↗</a></p>
-        <p>Point your agents at <a href="https://modal.com/llms.txt" target="_blank" rel="noopener noreferrer">modal.com/llms.txt ↗</a></p>
-        <p class="resources-purpose">Use Modal’s primitives to build an environment that fits your situation.</p>
-      </div>
-      <footer class="code-footer">
         <a href="https://modal.com/blog/vm-sandboxes-agent-computers" target="_blank" rel="noopener noreferrer">VM Sandboxes announcement ↗</a>
         <a href="https://modal.com/docs/guide/sandboxes#runtimes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
       </footer>
