@@ -18,28 +18,41 @@ function showSlide(index) {
 showSlide(slideFromUrl());
 window.addEventListener('hashchange', () => showSlide(slideFromUrl()));
 
-let swipeStart = null;
+const interactiveElements = 'a, button, input, textarea, select, [contenteditable]';
+let pointerStart = null;
+let suppressClick = false;
 
 document.addEventListener('pointerdown', event => {
-  if (event.pointerType !== 'touch') return;
-  swipeStart = event.isPrimary && !event.target.closest('a, button, input, textarea, select, [contenteditable]')
+  suppressClick = !event.isPrimary || Boolean(event.target.closest(interactiveElements));
+  pointerStart = !suppressClick
     ? { id: event.pointerId, x: event.clientX, y: event.clientY }
     : null;
 });
 
 document.addEventListener('pointerup', event => {
-  if (event.pointerId !== swipeStart?.id) return;
-  const dx = event.clientX - swipeStart.x;
-  const dy = event.clientY - swipeStart.y;
-  swipeStart = null;
+  if (event.pointerId !== pointerStart?.id) return;
+  const dx = event.clientX - pointerStart.x;
+  const dy = event.clientY - pointerStart.y;
+  pointerStart = null;
+  // A drag or swipe must not also advance through the browser's follow-up click.
+  suppressClick = Math.max(Math.abs(dx), Math.abs(dy)) > 10;
 
   // Ignore taps and vertical gestures so embedded slides still allow page scrolling.
-  if (Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+  if (event.pointerType === 'touch' && Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
     showSlide(currentSlide + (dx < 0 ? 1 : -1));
   }
 });
 
-document.addEventListener('pointercancel', () => { swipeStart = null; });
+document.addEventListener('pointercancel', () => {
+  pointerStart = null;
+  suppressClick = true;
+});
+
+document.addEventListener('click', event => {
+  if (suppressClick || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+  if (event.target.closest(interactiveElements) || !window.getSelection().isCollapsed) return;
+  showSlide(currentSlide + 1);
+});
 
 document.addEventListener('keydown', async event => {
   if (event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;

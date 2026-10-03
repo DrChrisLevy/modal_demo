@@ -8,7 +8,7 @@ From the repository root, serve the slides:
 uv run python -m http.server 8765 --bind 127.0.0.1 --directory slides
 ```
 
-Open http://127.0.0.1:8765/. Swipe left or right on a touchscreen, or use the arrow keys to navigate. Press F for fullscreen and Escape to exit fullscreen. Refresh keeps the current slide. You can also open `index.html` directly.
+Open http://127.0.0.1:8765/. Click or tap to advance. Swipe left or right on a touchscreen, or use the arrow keys to navigate. Press F for fullscreen and Escape to exit fullscreen. Refresh keeps the current slide. You can also open `index.html` directly.
 
 Run the demos from the repository root using the project’s Modal environment and your Modal authentication:
 
