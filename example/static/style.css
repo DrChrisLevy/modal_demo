@@ -71,10 +71,6 @@ h2 { font-size: 13px; font-weight: 600; margin: 0; }
 .section-heading .count { margin-left: 0; }
 .section-heading p { margin: 0 0 0 6px; font-size: 11px; color: #97919f; }
 .unsorted-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; list-style: none; padding: 0; margin: 0; }
-.starter { text-align: center; padding: 32px 15px 10px; color: #97909f; font-size: 12px; }
-.suggestions { margin-top: 13px; display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
-.suggestions button { border: 1px solid #e3e0ec; border-radius: 20px; padding: 7px 12px; color: #898094; font-size: 11px; background: transparent; }
-.suggestions button:hover { border-color: #bcb3da; color: var(--accent); background: white; }
 .error { background: #fff1f0; color: #a44848; border: 1px solid #f0d5d2; padding: 11px 14px; border-radius: 8px; font-size: 12px; line-height: 1.6; }
 .loading { color: #9993a4; text-align: center; padding: 60px; font-size: 13px; }
 dialog { width: min(570px, calc(100% - 32px)); max-height: calc(100dvh - 48px); padding: 28px; border: 1px solid #e8e4f1; border-radius: 16px; color: #3f374b; box-shadow: 0 24px 100px #261b4040; }

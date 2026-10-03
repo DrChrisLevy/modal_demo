@@ -134,7 +134,6 @@ function render() {
   const unsortedList = element('ul', 'unsorted-list');
   unsorted.forEach(task => unsortedList.append(taskCard(task)));
   $('unsorted').replaceChildren(unsortedList);
-  $('starter').hidden = tasks.length > 0;
   recentTask = null;
 }
 
@@ -165,10 +164,6 @@ $('add-form').addEventListener('submit', async event => {
     $('add-button').firstElementChild.textContent = 'Add task'; $('title').focus();
   }
 });
-
-$('suggestions').querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
-  $('title').value = button.textContent; $('title').focus();
-}));
 
 function labelRow(label = {}) {
   const row = element('div', 'label-row');
