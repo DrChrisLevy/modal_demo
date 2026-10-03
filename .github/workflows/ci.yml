@@ -13,7 +13,6 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
       MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
       RUN_REPO: ${{ github.repository }}
       RUN_REF: ${{ github.sha }}
     steps:

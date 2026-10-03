@@ -4,7 +4,6 @@ cd "$(dirname "$0")"
 
 export RUN_REPO="${RUN_REPO:-DrChrisLevy/modal_demo}" RUN_REF="${RUN_REF:-$(git rev-parse HEAD)}"
 export RUN_DIRECTORY=example RUN_PORT=8000
-export RUN_APP_ENV=TYPESAFE_API_KEY
 
 local_setup() {
   if [ -f .env ]; then export COMPOSE_ENV_FILES="$PWD/.env"; fi

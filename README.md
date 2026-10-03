@@ -26,11 +26,13 @@ Add keys to a `.env` file in the repo root as needed (see `.env.example`):
 ```dotenv
 # Required for Codex agent sessions
 OPENAI_API_KEY=your-openai-api-key-here
-# Optional: automatic task sorting with Jev
+# Optional: automatic task sorting with Jev when running locally
 TYPESAFE_API_KEY=your-typesafe-api-key-here
 ```
 
-The app works without a TypeSafe key; tasks stay in Unsorted.
+For remote runs, create a [Modal Secret](https://modal.com/docs/guide/secrets) named
+`typesafe-secret` containing `TYPESAFE_API_KEY`. Leave the value blank to run without
+automatic sorting; tasks stay in Unsorted. CI uses the same Modal Secret.
 
 ## Run on Modal
 
@@ -102,7 +104,7 @@ Local runs require Docker Compose. With Docker running:
 ```
 
 Tests use a temporary database and require `TYPESAFE_API_KEY` for live sorting checks.
-For GitHub Actions, add it as a repository secret.
+GitHub Actions only needs `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` as repository secrets.
 
 With the Codex CLI installed locally:
 
