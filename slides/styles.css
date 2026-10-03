@@ -118,79 +118,6 @@ h1 em {
   letter-spacing: -0.055em;
 }
 
-.intro-slide a { color: inherit; text-decoration: none; }
-.intro-slide a:hover { color: var(--accent); }
-.intro-slide a:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
-.intro-slide .content-heading { top: 22%; right: 68%; }
-
-.intro-photo {
-  position: absolute;
-  top: 36%;
-  left: 5.625%;
-  width: 25%;
-  height: auto;
-  border-radius: 0.625cqw;
-}
-
-.intro-course {
-  position: absolute;
-  left: 35%;
-  bottom: 9%;
-  font: 400 1.40625cqw/1.3 "Geist Mono", monospace;
-}
-
-.intro-course a { color: var(--accent); }
-.intro-course a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
-
-.post-stack {
-  position: absolute;
-  inset: 19% 5.625% 8% 35%;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.post-stack li {
-  position: absolute;
-  top: calc(var(--i) * 3.4375cqw);
-  left: 0;
-  right: 0;
-  z-index: var(--i);
-}
-
-.post-card {
-  display: grid;
-  grid-template-columns: 10cqw 1fr;
-  align-items: start;
-  gap: 1cqw;
-  width: 100%;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--secondary);
-  text-align: left;
-  cursor: pointer;
-}
-
-.post-card time {
-  padding-top: 0.55cqw;
-  color: var(--secondary);
-  font: 400 1.40625cqw/1.3 "Geist Mono", monospace;
-  white-space: nowrap;
-}
-
-.post-card img {
-  display: block;
-  width: calc(100% - var(--i) * 0.4cqw);
-  height: auto;
-  margin-left: calc(var(--i) * 0.4cqw);
-  border-radius: 0.4cqw;
-  box-shadow: 0 -0.12cqw 0.6cqw #0005;
-}
-
-.post-card:hover time, .post-card:focus-visible time { color: var(--accent); }
-.post-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-
 .local-workflow, .remote-workflow {
   position: absolute;
   top: 32%;
@@ -395,34 +322,6 @@ code { font-family: "Geist Mono", monospace; }
 .image-slide .source-excerpt pre { font-size: 1.640625cqw; }
 .image-slide .code-footer { justify-content: flex-end; }
 
-.overview-slide .code-layout { grid-template-columns: 59cqw 1fr; gap: 4cqw; }
-.overview-slide .source-excerpt pre { font-size: 1.640625cqw; }
-.overview-slide .code-footer { justify-content: flex-end; }
-.overview-command {
-  margin: 2.5cqw 0 0;
-  color: var(--accent);
-  font-size: 2.03125cqw;
-  line-height: 1.4;
-}
-.overview-notes h3 {
-  margin: 0 0 2.1875cqw;
-  color: var(--accent);
-  font-size: 2.5cqw;
-  font-weight: 400;
-  letter-spacing: -0.035em;
-}
-.overview-notes p {
-  margin: 0 0 1.875cqw;
-  color: var(--secondary);
-  font-size: 2.03125cqw;
-  line-height: 1.4;
-  letter-spacing: -0.025em;
-}
-
-.training-slide .code-layout { grid-template-columns: 49cqw 1fr; gap: 4cqw; }
-.training-slide .source-excerpt pre { font-size: 1.40625cqw; line-height: 1.35; }
-.training-slide .overview-command { position: absolute; left: 5.625%; bottom: 4.5%; margin: 0; }
-
 .sandbox-intro-content {
   position: absolute;
   top: 30%;
@@ -435,20 +334,6 @@ code { font-family: "Geist Mono", monospace; }
 .sandbox-intro-content p { margin: 0 0 2.1875cqw; color: var(--secondary); }
 .sandbox-intro-content .sandbox-intro-purpose { margin-top: 4.375cqw; color: var(--accent); }
 .sandbox-intro-slide .code-footer { justify-content: flex-end; }
-
-.screenshot-layout {
-  position: absolute;
-  inset: 25% 5.625% 6%;
-  margin: 0;
-}
-
-.screenshot-layout img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: left top;
-}
 
 .resources-content {
   position: absolute;
