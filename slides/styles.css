@@ -468,8 +468,6 @@ code { font-family: "Geist Mono", monospace; }
 .resources-content a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 .resources-content a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .resources-content .resources-purpose { margin-top: 2.5cqw; color: var(--foreground); max-width: 78cqw; }
-.related-post { margin-top: 3.125cqw; }
-.related-post p { margin: 0.9375cqw 0 0; max-width: 77cqw; font-size: 1.875cqw; }
 .resources-slide .code-footer { justify-content: flex-end; }
 
 @page { size: 13.333333in 7.5in; margin: 0; }

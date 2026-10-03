@@ -446,23 +446,16 @@ image = sandbox.<span class="py-call">snapshot_filesystem</span>(<span class="py
         <p>Explore the docs: <a href="https://modal.com/docs" target="_blank" rel="noopener noreferrer">modal.com/docs ↗</a></p>
         <p>Point your agents at <a href="https://modal.com/llms.txt" target="_blank" rel="noopener noreferrer">modal.com/llms.txt ↗</a></p>
         <p class="resources-purpose">Use Modal’s primitives to build an environment that fits your situation.</p>
-        <div class="related-post">
-          <a href="https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodal_native_test_stack%2Fmodal_native_test_stack.md" target="_blank" rel="noopener noreferrer">Another approach: Sandboxes + Sidecars ↗</a>
-          <p>A larger app using gVisor Sandboxes with PostgreSQL, Redis, and OpenSearch Sidecars for a Compose-style stack.</p>
-        </div>
       </div>
-      <footer class="code-footer"><span>Questions?</span></footer>
-      <!-- The linked blog explicitly uses standard gVisor Sandboxes with PostgreSQL, Redis, and OpenSearch Sidecars, without a Docker daemon. This is a separate approach from this deck’s VM Sandbox + Docker Compose example. -->
+      <footer class="code-footer">
+        <a href="https://modal.com/blog/vm-sandboxes-agent-computers" target="_blank" rel="noopener noreferrer">VM Sandboxes announcement ↗</a>
+        <a href="https://modal.com/docs/guide/sandboxes#runtimes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
+      </footer>
     </section>
   </main>
   <!--
     Style reference:
     https://chris-levy-modal-journey.cleavey1985.chatgpt.site/
-
-    Context for later slides:
-    https://drchrislevy.com/blog/blog_post?fpath=posts%2Fmodal_native_test_stack%2Fmodal_native_test_stack.md
-    The earlier POC uses a gVisor Sandbox with Sidecars. This demo keeps
-    Docker Compose and runs a Docker engine inside a Modal VM Sandbox.
   -->
 </body>
 </html>
