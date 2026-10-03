@@ -388,6 +388,9 @@ code { font-family: "Geist Mono", monospace; }
 .vm-slide .source-excerpt pre { font-size: 1.640625cqw; }
 .vm-slide .code-footer { justify-content: flex-end; }
 
+.create-vm-slide .code-layout { top: 22%; }
+.create-vm-slide .source-excerpt pre { line-height: 1.2; }
+
 .image-slide .code-layout { display: block; }
 .image-slide .source-excerpt pre { font-size: 1.640625cqw; }
 .image-slide .code-footer { justify-content: flex-end; }

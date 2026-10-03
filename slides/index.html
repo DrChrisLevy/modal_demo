@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Docker Compose on Modal · Chris Levy</title>
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
   <script src="presentation.js" defer></script>
 </head>
 <body>
@@ -62,8 +62,8 @@ app = modal.<span class="py-call">App</span>(<span class="py-string">&quot;basic
 
 @app.<span class="py-call">local_entrypoint</span>()
 <span class="py-keyword">def</span> <span class="py-call">main</span>(exp: <span class="py-call">int</span> = <span class="py-number">2</span>):
-    <span class="py-keyword">for</span> res <span class="py-keyword">in</span> f.<span class="py-call">map</span>(<span class="py-call">range</span>(<span class="py-number">200</span>), [exp] * <span class="py-number">200</span>):
-        <span class="py-call">print</span>(res)</code></pre>
+    <span class="py-keyword">for</span> i <span class="py-keyword">in</span> f.<span class="py-call">map</span>(<span class="py-call">range</span>(<span class="py-number">200</span>), [exp] * <span class="py-number">200</span>):
+        <span class="py-call">print</span>(i)</code></pre>
           </figure>
           <p class="overview-command"><code>uv run modal run slides/simple.py</code></p>
         </div>
@@ -167,7 +167,7 @@ vol = modal.<span class="py-call">Volume</span>.<span class="py-call">from_name<
             <div><dt><code>./run down</code></dt><dd>Stop the services</dd></div>
             <div><dt><code>./run down --volumes</code></dt><dd>Stop services and delete volumes</dd></div>
           </dl>
-          <p class="workflow-note"><code>./run</code> wraps Docker Compose.</p>
+          <p class="workflow-note">Bring your own Docker Compose project;<br>this task board just demonstrates the workflow.</p>
         </div>
       </div>
 
@@ -214,8 +214,9 @@ vol = modal.<span class="py-call">Volume</span>.<span class="py-call">from_name<
       <p class="cloud-command"><code>./run up remote demo</code></p>
       <!--
         The same Compose app runs inside a Modal VM Sandbox with a Docker engine.
-        "demo" is the remote environment name. A new VM clones the configured
-        GitHub repository/ref; commit and push local changes before creating it.
+        "demo" is the remote environment name. A new VM clones the checked-out
+        commit by default; RUN_REF can override it. Commit and push local changes
+        before creating the VM.
         Shells, test runs, and agents can use that named environment.
         Source: ../run; ../runner/remote.py, VM.create(), VM.checkout(), and up().
       -->
@@ -248,7 +249,7 @@ vol = modal.<span class="py-call">Volume</span>.<span class="py-call">from_name<
       -->
     </section>
 
-    <section class="slide code-slide vm-slide" aria-labelledby="slide-11-title" aria-roledescription="slide" hidden>
+    <section class="slide code-slide vm-slide create-vm-slide" aria-labelledby="slide-11-title" aria-roledescription="slide" hidden>
       <header class="content-heading">
         <h2 id="slide-11-title">Create the VM</h2>
       </header>
@@ -266,7 +267,11 @@ vol = modal.<span class="py-call">Volume</span>.<span class="py-call">from_name<
     <span class="py-parameter">memory</span>=<span class="py-number">4096</span>,
     <span class="py-parameter">timeout</span>=<span class="py-number">3600</span>,
     <span class="py-parameter">encrypted_ports</span>=[<span class="py-constant">PORT</span>],
-    <span class="py-parameter">secrets</span>=[modal.<span class="py-call">Secret</span>.<span class="py-call">from_dict</span>({<span class="py-string">&quot;GH_TOKEN&quot;</span>: token})],
+    <span class="py-parameter">secrets</span>=[
+        modal.<span class="py-call">Secret</span>.<span class="py-call">from_dict</span>(
+            {<span class="py-string">&quot;GH_TOKEN&quot;</span>: token, <span class="py-string">&quot;TYPESAFE_API_KEY&quot;</span>: os.<span class="py-call">getenv</span>(<span class="py-string">&quot;TYPESAFE_API_KEY&quot;</span>, <span class="py-string">&quot;&quot;</span>)}
+        ),
+    ],
     <span class="py-parameter">readiness_probe</span>=modal.<span class="py-call">Probe</span>.<span class="py-call">with_exec</span>(<span class="py-string">&quot;docker&quot;</span>, <span class="py-string">&quot;info&quot;</span>, <span class="py-parameter">interval_ms</span>=<span class="py-number">500</span>),
 )</code></pre>
         </figure>
@@ -274,7 +279,7 @@ vol = modal.<span class="py-call">Volume</span>.<span class="py-call">from_name<
       <footer class="code-footer">
         <a href="https://modal.com/docs/guide/sandboxes#runtimes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
       </footer>
-      <!-- Source notes: Sandbox.create call from runner/remote.py, VM.create(), preserving all arguments and original line breaks. Surrounding method indentation is removed; token is obtained earlier with gh auth token. Python syntax spans are generated with the standard-library tokenizer. BOOT is defined in runner/image.py. -->
+      <!-- Source notes: Sandbox.create call from runner/remote.py, VM.create(), preserving all arguments and original line breaks. Surrounding method indentation is removed. VM.create() first calls load_dotenv() and obtains token with gh auth token; existing environment values, including GitHub Actions secrets, take precedence over .env. BOOT is defined in runner/image.py. -->
     </section>
 
     <section class="slide code-slide image-slide" aria-labelledby="slide-12-title" aria-roledescription="slide" hidden>
@@ -355,7 +360,7 @@ sandbox.<span class="py-call">exec</span>(
       <footer class="code-footer">
         <a href="https://modal.com/docs/guide/sandbox-spawn#running-commands-in-sandboxes" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
       </footer>
-      <!-- Simplified teaching flow based on checkout() and up() in runner/remote.py:104–109 and 225. Calls the underlying Sandbox.exec() API directly in place of the project's VM.run() helper. Auth and clone use direct argument lists; fetch/checkout and Compose use bash. Each wait() keeps the steps sequential. Assumes the VM is ready and already has the GitHub token injected as in VM.create(). Output collection, exit-code checks, cancellation, Git identity/baseline tracking, and timeout arguments for Git commands are omitted. The real helper checks failures before proceeding. -->
+      <!-- Simplified teaching flow based on checkout() and up() in runner/remote.py. Calls the underlying Sandbox.exec() API directly in place of the project's VM.run() helper. Auth and clone use direct argument lists; fetch/checkout and Compose use bash. Each wait() keeps the steps sequential. Assumes the VM is ready and already has the GitHub token injected as in VM.create(). Output collection, exit-code checks, cancellation, Git identity/baseline tracking, and timeout arguments for Git commands are omitted. The real helper checks failures before proceeding. -->
     </section>
 
     <section class="slide code-slide vm-slide" aria-labelledby="slide-15-title" aria-roledescription="slide" hidden>
@@ -383,7 +388,7 @@ image = sandbox.<span class="py-call">snapshot_filesystem</span>(<span class="py
       <footer class="code-footer">
         <a href="https://modal.com/docs/guide/sandbox-snapshots" target="_blank" rel="noopener noreferrer">Modal docs ↗</a>
       </footer>
-      <!-- Pseudocode based on load_or_prepare_image() in runner/remote.py:189–211. cached stands for metadata loaded from PREPARED, or None if absent. VM creation and checkout are summarized in a comment; sandbox represents vm.sandbox. The exact pull/build command is passed directly to Sandbox.exec() in place of VM.run(). Its failure checks, logging, process management, timeout, and preparation lock are omitted. Before snapshotting, the real code removes /workspace/repo, /root/.config/gh, and /root/.gitconfig, sends TERM to Docker, waits for its PID file to disappear, and syncs. These steps are summarized in the comment and must not be skipped in the implementation. It saves the image ID and a seven-day expiry, then terminates the preparation VM in finally. This is a filesystem snapshot containing Docker image/build state, not a memory snapshot or saved live app. Fresh application VMs still clone the repo and run Compose. -->
+      <!-- Pseudocode based on load_or_prepare_image() in runner/remote.py. cached stands for metadata loaded from PREPARED, or None if absent. VM creation and checkout are summarized in a comment; sandbox represents vm.sandbox. The exact pull/build command is passed directly to Sandbox.exec() in place of VM.run(). Its failure checks, logging, process management, timeout, and preparation lock are omitted. Before snapshotting, the real code removes /workspace/repo, /root/.config/gh, and /root/.gitconfig, sends TERM to Docker, waits for its PID file to disappear, and syncs. These steps are summarized in the comment and must not be skipped in the implementation. It saves the image ID and a seven-day expiry, then terminates the preparation VM in finally. This is a filesystem snapshot containing Docker image/build state, not a memory snapshot or saved live app. Fresh application VMs still clone the repo and run Compose. -->
     </section>
 
     <section class="slide code-slide ci-slide" aria-labelledby="slide-16-title" aria-roledescription="slide" hidden>
@@ -397,6 +402,7 @@ image = sandbox.<span class="py-call">snapshot_filesystem</span>(<span class="py
   <span class="py-call">GH_TOKEN</span>: ${{ github.token }}
   <span class="py-call">MODAL_TOKEN_ID</span>: ${{ secrets.MODAL_TOKEN_ID }}
   <span class="py-call">MODAL_TOKEN_SECRET</span>: ${{ secrets.MODAL_TOKEN_SECRET }}
+  <span class="py-call">TYPESAFE_API_KEY</span>: ${{ secrets.TYPESAFE_API_KEY }}
   <span class="py-call">RUN_REPO</span>: ${{ github.repository }}
   <span class="py-call">RUN_REF</span>: ${{ github.sha }}</code></pre></figure>
         <figure class="source-excerpt"><pre><code class="language-yaml"><span class="py-call">steps</span>:
