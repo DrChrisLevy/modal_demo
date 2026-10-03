@@ -4,25 +4,13 @@ A small demo of using [Modal VM Sandboxes](https://modal.com/docs/guide/sandboxe
 to run Docker Compose apps, execute
 tests, and give coding agents isolated development environments.
 
-The app in [`example/`](example/) is a small task board backed by FastAPI and
-PostgreSQL. Add a task and [Jev](https://docs.typesafe.ai/primitives/choice) sorts
-it into one of your labels. Edit label names and descriptions on the page; the
-next task uses the updated labels. Adding or editing a label also rechecks unfinished
-Unsorted tasks against all current labels, with up to four classifications in parallel.
-Already categorized and completed tasks stay put; deleting or reordering labels alone
-does not trigger re-sorting. You can also move tasks manually, sort them again, and
-check them off. Tasks that do not fit a label, or cannot be classified
-because Jev is unavailable, stay in Unsorted.
-
-Sorting uses Jev's Choice result, including an explicit no-match option. Probabilities
-are stored with the task; there is no additional confidence threshold. Results are
-discarded if the task or labels change while a re-sort is running.
+The app in [`example/`](example/) is a toy example. Use the demo as a starting point
+for building workflows around your own applications, tools, and pipelines.
 
 ## Set up for Modal
 
 Requires `uv`, authenticated GitHub CLI (`gh auth login`),
-a [Modal account](https://modal.com/signup), a TypeSafe API key for Jev, and an
-OpenAI API key for Codex agent sessions.
+and a [Modal account](https://modal.com/signup).
 
 VMs use the generally available `runtime="vm"` API in Modal SDK 1.6.0.
 Docker runs inside the Modal VM; no local Docker installation is needed.
@@ -33,16 +21,16 @@ uv sync --frozen
 uv run modal setup  # skip if already authenticated
 ```
 
-Add your keys to a `.env` file in the repo root (see `.env.example`):
+Add keys to a `.env` file in the repo root as needed (see `.env.example`):
 
 ```dotenv
+# Required for Codex agent sessions
 OPENAI_API_KEY=your-openai-api-key-here
+# Optional: automatic task sorting with Jev
 TYPESAFE_API_KEY=your-typesafe-api-key-here
 ```
 
-Local Compose and remote VMs receive only the app keys listed in `RUN_APP_ENV`.
-The TypeSafe key stays on the backend. Jev is called through the TypeSafe API;
-there are no local models or model-weight downloads.
+The app works without a TypeSafe key; tasks stay in Unsorted.
 
 ## Run on Modal
 
@@ -113,10 +101,8 @@ Local runs require Docker Compose. With Docker running:
 ./run down --volumes  # stop containers and delete the database
 ```
 
-Tests run a separate API server against a temporary PostgreSQL database, so your
-preview tasks and labels are untouched. The integration suite calls real Jev and
-requires `TYPESAFE_API_KEY`; service failures and no-match answers have separate
-unit tests. GitHub Actions also needs a `TYPESAFE_API_KEY` repository secret.
+Tests use a temporary database and require `TYPESAFE_API_KEY` for live sorting checks.
+For GitHub Actions, add it as a repository secret.
 
 With the Codex CLI installed locally:
 
