@@ -1,20 +1,17 @@
-# Modal Compose Demo
+# Modal VM Sandboxes Demo with docker compose
 
 A small demo of using [Modal VM Sandboxes](https://modal.com/docs/guide/sandboxes#runtimes)
 to run Docker Compose apps, execute
 tests, and give coding agents isolated development environments.
 
-The app in [`example/`](example/) is a toy example. Use the demo as a starting point
-for building workflows around your own applications, tools, and pipelines.
+The app in [`example/`](example/) is incidental. **Bring your own Docker Compose
+project** and use the patterns in [`runner/`](runner/) to spin it up in Modal VM
+Sandboxes, run its tests, and give coding agents an isolated environment to work in.
 
 ## Set up for Modal
 
 Requires `uv`, authenticated GitHub CLI (`gh auth login`),
 and a [Modal account](https://modal.com/signup).
-
-VMs use the generally available `runtime="vm"` API in Modal SDK 1.6.0.
-Docker runs inside the Modal VM; no local Docker installation is needed.
-The Modal sandbox uses your local `gh` token with the same GitHub permissions.
 
 ```bash
 uv sync --frozen
@@ -30,7 +27,7 @@ OPENAI_API_KEY=your-openai-api-key-here
 TYPESAFE_API_KEY=your-typesafe-api-key-here
 ```
 
-The app works without a TypeSafe key; tasks stay in Unsorted. But it's more fun
+The demo app works without a TypeSafe key and tasks stay in Unsorted. But it's more fun
 with Jev hooked up :)
 
 Remote runs read the key from your local `.env`; CI reads it from GitHub Secrets.
