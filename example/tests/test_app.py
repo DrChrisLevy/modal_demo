@@ -1,5 +1,7 @@
 """Integration tests against real HTTP, a private PostgreSQL database, and Jev."""
 
+import re
+
 import pytest
 
 
@@ -7,8 +9,12 @@ def test_health_and_page(api):
     assert api.get("/health").json() == {"status": "ok", "database": "postgresql"}
     page = api.get("/")
     assert page.status_code == 200 and '<h1 id="page-title">Tasks</h1>' in page.text
-    for asset in ("app.js", "style.css"):
-        assert api.get(f"/static/{asset}").status_code == 200
+    assert page.headers["cache-control"] == "no-store"
+    assets = re.findall(r'(?:src|href)="(/static/[^\"]+)"', page.text)
+    assert len(assets) == 2
+    for asset in assets:
+        assert "?v=" in asset
+        assert api.get(asset).status_code == 200
 
 
 def test_create_read_complete_and_reopen(api, task_factory):

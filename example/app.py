@@ -1,5 +1,6 @@
 """A small task board: PostgreSQL persistence and Jev-powered sorting."""
 
+import hashlib
 import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -7,7 +8,7 @@ from pathlib import Path
 
 import psycopg
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
@@ -171,7 +172,11 @@ def sort_unsorted(labels):
 
 @app.get("/")
 def index():
-    return FileResponse(ROOT / "static" / "index.html")
+    html = (ROOT / "static" / "index.html").read_text()
+    for asset in ("app.js", "style.css"):
+        version = hashlib.sha256((ROOT / "static" / asset).read_bytes()).hexdigest()[:16]
+        html = html.replace(f"/static/{asset}", f"/static/{asset}?v={version}")
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/health")
