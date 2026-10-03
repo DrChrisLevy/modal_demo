@@ -18,6 +18,29 @@ function showSlide(index) {
 showSlide(slideFromUrl());
 window.addEventListener('hashchange', () => showSlide(slideFromUrl()));
 
+let swipeStart = null;
+
+document.addEventListener('pointerdown', event => {
+  if (event.pointerType !== 'touch') return;
+  swipeStart = event.isPrimary && !event.target.closest('a, button, input, textarea, select, [contenteditable]')
+    ? { id: event.pointerId, x: event.clientX, y: event.clientY }
+    : null;
+});
+
+document.addEventListener('pointerup', event => {
+  if (event.pointerId !== swipeStart?.id) return;
+  const dx = event.clientX - swipeStart.x;
+  const dy = event.clientY - swipeStart.y;
+  swipeStart = null;
+
+  // Ignore taps and vertical gestures so embedded slides still allow page scrolling.
+  if (Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    showSlide(currentSlide + (dx < 0 ? 1 : -1));
+  }
+});
+
+document.addEventListener('pointercancel', () => { swipeStart = null; });
+
 document.addEventListener('keydown', async event => {
   if (event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
 
