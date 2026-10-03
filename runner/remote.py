@@ -14,6 +14,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import modal
+from dotenv import load_dotenv
 
 from runner.image import BOOT, CODEX_VERSION, tools_image
 
@@ -57,6 +58,7 @@ class VM:
 
     @classmethod
     def create(cls, image):
+        load_dotenv()
         token = subprocess.check_output(["gh", "auth", "token"], text=True).strip()
         sandbox = modal.Sandbox.create(
             "bash",
@@ -70,7 +72,11 @@ class VM:
             memory=4096,
             timeout=3600,
             encrypted_ports=[PORT],
-            secrets=[modal.Secret.from_dict({"GH_TOKEN": token})],
+            secrets=[
+                modal.Secret.from_dict(
+                    {"GH_TOKEN": token, "TYPESAFE_API_KEY": os.getenv("TYPESAFE_API_KEY", "")}
+                ),
+            ],
             readiness_probe=modal.Probe.with_exec("docker", "info", interval_ms=500),
         )
         try:

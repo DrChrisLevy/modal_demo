@@ -1,35 +1,41 @@
-# Modal Compose Demo
+# Modal VM Sandboxes Demo with docker compose
 
 A small demo of using [Modal VM Sandboxes](https://modal.com/docs/guide/sandboxes#runtimes)
 to run Docker Compose apps, execute
 tests, and give coding agents isolated development environments.
 
-The app in [`example/`](example/) is a toy example. Use the demo as a starting point
-for building workflows around your own applications, tools, and pipelines.
+The app in [`example/`](example/) is incidental. **Bring your own Docker Compose
+project** and use the patterns in [`runner/`](runner/) to spin it up in Modal VM
+Sandboxes, run its tests, and give coding agents an isolated environment to work in.
 
 ## Set up for Modal
 
 Requires `uv`, authenticated GitHub CLI (`gh auth login`),
-a [Modal account](https://modal.com/signup), and an OpenAI API key.
-
-VMs use the generally available `runtime="vm"` API in Modal SDK 1.6.0.
-Docker runs inside the Modal VM; no local Docker installation is needed.
-The Modal sandbox uses your local `gh` token with the same GitHub permissions.
+and a [Modal account](https://modal.com/signup).
 
 ```bash
 uv sync --frozen
 uv run modal setup  # skip if already authenticated
 ```
 
-Add your OpenAI API key to a `.env` file in the repo root:
+Add keys to a `.env` file in the repo root as needed (see `.env.example`):
 
 ```dotenv
+# Required for Codex agent sessions
 OPENAI_API_KEY=your-openai-api-key-here
+# Optional: automatic task sorting with Jev
+TYPESAFE_API_KEY=your-typesafe-api-key-here
 ```
+
+The demo app works without a TypeSafe key and tasks stay in Unsorted. But it's more fun
+with Jev hooked up :)
+
+Remote runs read the key from your local `.env`; CI reads it from GitHub Secrets.
 
 ## Run on Modal
 
 New VMs clone `RUN_REPO` at `RUN_REF`, set at the top of `run`.
+The default ref is the checked-out commit; `RUN_REF=main` explicitly selects main.
 Commit and push application changes before starting a new VM to include them.
 
 `demo` below is a name you choose for the remote environment. Replace it with
@@ -94,6 +100,10 @@ Local runs require Docker Compose. With Docker running:
 ./run down            # stop containers; keep the database
 ./run down --volumes  # stop containers and delete the database
 ```
+
+Tests use a temporary database and require `TYPESAFE_API_KEY` for live sorting checks.
+GitHub Actions needs `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`, and `TYPESAFE_API_KEY`
+as repository secrets.
 
 With the Codex CLI installed locally:
 

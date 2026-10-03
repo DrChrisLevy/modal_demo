@@ -3,84 +3,52 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Tiny Task Board</title>
-  <style>
-    :root { font-family: ui-sans-serif, system-ui, sans-serif; color: #18302b; background: #f4f5ef; }
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 64px 24px; }
-    main { max-width: 720px; margin: auto; }
-    .eyebrow { font: 12px ui-monospace, monospace; letter-spacing: 2px; text-transform: uppercase; }
-    h1 { font-size: clamp(36px, 7vw, 58px); letter-spacing: -2px; margin: 16px 0; }
-    .intro { color: #596d65; line-height: 1.6; margin-bottom: 32px; }
-    form { display: flex; gap: 10px; }
-    input[type=text] { flex: 1; min-width: 0; padding: 14px; border: 1px solid #c9d4c8; border-radius: 8px; font: inherit; }
-    button { padding: 12px 18px; border: 0; border-radius: 8px; background: #1c5441; color: white; font: inherit; cursor: pointer; }
-    button:disabled { opacity: .5; cursor: wait; }
-    button:focus-visible, input:focus-visible { outline: 3px solid #8ccca5; outline-offset: 3px; }
-    ul { list-style: none; padding: 0; margin-top: 24px; }
-    li { display: flex; gap: 14px; align-items: center; background: white; padding: 20px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #e0e6dd; }
-    li label { flex: 1; overflow-wrap: anywhere; cursor: pointer; }
-    input[type=checkbox] { width: 20px; height: 20px; accent-color: #1c5441; }
-    li.done label { text-decoration: line-through; color: #819188; }
-    #empty, footer { color: #748379; font-size: 14px; margin-top: 28px; }
-    #error { color: #a03326; min-height: 1.4em; }
-  </style>
+  <meta name="theme-color" content="#f7f8fa">
+  <title>Tasks</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
 </head>
 <body>
-<main>
-  <div class="eyebrow">A small place to start</div>
-  <h1>Tiny Task Board</h1>
-  <p class="intro">Make a little progress. Add a task, check it off, come back for the next one.</p>
-  <form id="add-form">
-    <input id="title" type="text" aria-label="New task" placeholder="What needs doing?" maxlength="200" required>
-    <button type="submit">Add task</button>
-  </form>
-  <p id="error" role="alert"></p>
-  <ul id="tasks" aria-label="Tasks"></ul>
-  <p id="empty" hidden>Nothing here yet. Make room for your first task.</p>
-  <footer>Your tasks are saved when you come back.</footer>
-</main>
-<script>
-  const list = document.querySelector('#tasks');
-  const error = document.querySelector('#error');
-  async function request(path, options = {}) {
-    const response = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...options});
-    if (!response.ok) throw new Error('Something went wrong. Please try again.');
-    return response.json();
-  }
-  async function refresh() {
-    const tasks = await request('/api/tasks');
-    list.replaceChildren();
-    document.querySelector('#empty').hidden = tasks.length > 0;
-    for (const task of tasks) {
-      const row = document.createElement('li');
-      row.className = task.done ? 'done' : '';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox'; checkbox.checked = task.done; checkbox.id = `task-${task.id}`;
-      const label = document.createElement('label');
-      label.htmlFor = checkbox.id; label.textContent = task.title;
-      checkbox.addEventListener('change', async () => {
-        checkbox.disabled = true; error.textContent = '';
-        try {
-          await request(`/api/tasks/${task.id}`, {method: 'PATCH', body: JSON.stringify({done: checkbox.checked})});
-          await refresh();
-        } catch (e) { checkbox.checked = !checkbox.checked; error.textContent = e.message; }
-        finally { checkbox.disabled = false; }
-      });
-      row.append(checkbox, label); list.append(row);
-    }
-  }
-  document.querySelector('#add-form').addEventListener('submit', async event => {
-    event.preventDefault(); error.textContent = '';
-    const input = document.querySelector('#title');
-    const button = event.target.querySelector('button'); button.disabled = true;
-    try {
-      await request('/api/tasks', {method: 'POST', body: JSON.stringify({title: input.value})});
-      input.value = ''; await refresh(); input.focus();
-    } catch (e) { error.textContent = e.message; }
-    finally { button.disabled = false; }
-  });
-  refresh().catch(e => { error.textContent = e.message; });
-</script>
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <h1 id="page-title">Tasks</h1>
+    </section>
+    <section class="capture" aria-label="Add a task">
+      <form id="add-form">
+        <svg class="input-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input id="title" type="text" aria-label="New task" placeholder="What’s on your mind?" maxlength="200" autocomplete="off" required>
+        <button id="add-button" class="primary" type="submit"><span>Add task</span><span aria-hidden="true">↵</span></button>
+      </form>
+      <span id="sort-status" class="sr-only" role="status" aria-live="polite"></span>
+    </section>
+    <div class="board-toolbar">
+      <div class="views" role="group" aria-label="Task status">
+        <button id="open-view" class="view active" type="button" aria-pressed="true">To do <span id="open-count">0</span></button>
+        <button id="done-view" class="view" type="button" aria-pressed="false">Completed <span id="done-count">0</span></button>
+      </div>
+      <button id="edit-labels" class="subtle" type="button">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M8 13v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Edit labels
+      </button>
+    </div>
+    <p id="error" class="error" role="alert" hidden></p>
+    <div id="loading" class="loading" role="status">Loading your board…</div>
+    <div id="board" class="board" aria-label="Tasks grouped by label"></div>
+    <section id="unsorted-section" class="unsorted-section" aria-label="Unsorted tasks" hidden>
+      <div class="section-heading"><span class="dot neutral"></span><h2>Unsorted</h2><span id="unsorted-count" class="count"></span><p>A place for tasks that need a second look.</p></div>
+      <div id="unsorted"></div>
+    </section>
+  </main>
+  <dialog id="labels-dialog" aria-labelledby="labels-title">
+    <form id="labels-form">
+      <div class="dialog-header"><div><div class="eyebrow">Make it yours</div><h2 id="labels-title">Your labels</h2></div><button id="close-labels" class="icon-button" type="button" aria-label="Close labels editor">×</button></div>
+      <p class="dialog-intro">Names and descriptions guide automatic sorting. Adding or editing a label also checks unfinished tasks in Unsorted for a match.</p>
+      <div id="label-rows" class="label-rows"></div>
+      <button id="add-label" class="subtle add-label" type="button">＋ Add a label</button>
+      <p class="label-note">Removing a label moves its tasks to Unsorted. You can sort them again anytime.</p>
+      <p id="labels-error" class="error" role="alert" hidden></p>
+      <div class="dialog-actions"><button id="cancel-labels" class="secondary" type="button">Cancel</button><button id="save-labels" class="primary" type="submit">Save labels</button></div>
+    </form>
+  </dialog>
 </body>
 </html>

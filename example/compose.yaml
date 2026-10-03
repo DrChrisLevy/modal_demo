@@ -5,6 +5,7 @@ services:
       - "${APP_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql://demo:demo@db:5432/tasks
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
     volumes:
       - .:/app
     depends_on:
