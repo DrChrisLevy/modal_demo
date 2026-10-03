@@ -8,7 +8,8 @@ import pytest
 def test_health_and_page(api):
     assert api.get("/health").json() == {"status": "ok", "database": "postgresql"}
     page = api.get("/")
-    assert page.status_code == 200 and '<h1 id="page-title">Tasks</h1>' in page.text
+    assert page.status_code == 200
+    assert '<h1 id="page-title">Make room for<br><span>good things.</span></h1>' in page.text
     assert page.headers["cache-control"] == "no-store"
     assets = re.findall(r'(?:src|href)="(/static/[^\"]+)"', page.text)
     assert len(assets) == 2

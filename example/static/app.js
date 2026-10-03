@@ -1,7 +1,7 @@
 'use strict';
 
 const $ = id => document.getElementById(id);
-const palette = ['#8c7be0', '#d79b65', '#679d99', '#779ad0', '#c77f9d', '#91a566', '#b19c70', '#8a88a2'];
+const palette = ['#7954d6', '#d97532', '#278c75', '#3879ce', '#c84a83', '#718a29', '#ad7425', '#7764a0'];
 let labels = [];
 let tasks = [];
 let completed = false;
@@ -54,7 +54,8 @@ async function changeTask(task, path, options, row) {
     const updated = await request(path, options);
     tasks = updated ? tasks.map(item => item.id === task.id ? updated : item) : tasks.filter(item => item.id !== task.id);
     if (updated && options.method === 'PATCH' && Object.hasOwn(JSON.parse(options.body), 'done')) {
-      $('sort-status').textContent = updated.done ? 'Task completed' : 'Task reopened';
+      $('sort-status').textContent = updated.done ? 'Task completed. Little win, big energy!' : 'Task reopened';
+      if (updated.done && !task.done) celebrate();
     } else if (updated) announce(updated);
     else $('sort-status').textContent = 'Task deleted';
     render();
@@ -103,7 +104,29 @@ function taskCard(task) {
   return card;
 }
 
+function celebrate() {
+  const layer = $('celebration');
+  layer.replaceChildren();
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (let index = 0; index < 24; index++) {
+    const piece = element('span', 'confetti');
+    piece.style.setProperty('--x', `${(Math.random() - .5) * 520}px`);
+    piece.style.setProperty('--y', `${-100 - Math.random() * 260}px`);
+    piece.style.setProperty('--spin', `${Math.random() * 720 - 360}deg`);
+    piece.style.background = palette[index % palette.length];
+    piece.addEventListener('animationend', () => piece.remove(), {once: true});
+    layer.append(piece);
+  }
+}
+
 function render() {
+  const done = tasks.filter(task => task.done).length;
+  const percent = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+  $('progress-message').textContent = !tasks.length ? 'A fresh start. Full of possibilities.' :
+    done === tasks.length ? 'All done. Look at you go!' : done ? 'Look at that momentum. Keep it going!' : 'Big things start with one little task.';
+  $('progress-count').textContent = `${done} of ${tasks.length} completed`;
+  $('progress-fill').style.width = `${percent}%`;
+  $('progress-fill').parentElement.setAttribute('aria-valuenow', String(percent));
   $('open-count').textContent = tasks.filter(task => !task.done).length;
   $('done-count').textContent = tasks.filter(task => task.done).length;
   $('board').replaceChildren();
