@@ -58,7 +58,7 @@ class VM:
 
     @classmethod
     def create(cls, image):
-        load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+        load_dotenv()
         token = subprocess.check_output(["gh", "auth", "token"], text=True).strip()
         sandbox = modal.Sandbox.create(
             "bash",
