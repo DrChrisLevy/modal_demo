@@ -1,7 +1,7 @@
 'use strict';
 
 const $ = id => document.getElementById(id);
-const palette = ['#8c7be0', '#d79b65', '#679d99', '#779ad0', '#c77f9d', '#91a566', '#b19c70', '#8a88a2'];
+const palette = ['#7552d6', '#dc7526', '#16866b', '#397dc3', '#c34179', '#678329', '#a77a14', '#7865a0'];
 let labels = [];
 let tasks = [];
 let completed = false;
@@ -14,6 +14,25 @@ function element(tag, className, text) {
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+function celebrate(row) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const bounds = row.getBoundingClientRect();
+  const burst = element('div', 'confetti-burst');
+  burst.style.left = `${Math.min(window.innerWidth - 60, Math.max(60, bounds.left + bounds.width / 2))}px`;
+  burst.style.top = `${Math.min(window.innerHeight - 60, Math.max(60, bounds.top + bounds.height / 2))}px`;
+  for (let i = 0; i < 18; i++) {
+    const piece = element('i', 'confetti');
+    const angle = (i / 18) * Math.PI * 2;
+    piece.style.setProperty('--x', `${Math.cos(angle) * (65 + Math.random() * 50)}px`);
+    piece.style.setProperty('--y', `${Math.sin(angle) * 90 - 35}px`);
+    piece.style.setProperty('--spin', `${i * 65}deg`);
+    piece.style.background = palette[i % palette.length];
+    burst.append(piece);
+  }
+  $('celebration').append(burst);
+  setTimeout(() => burst.remove(), 950);
 }
 
 function showError(message, target = 'error') {
@@ -54,7 +73,8 @@ async function changeTask(task, path, options, row) {
     const updated = await request(path, options);
     tasks = updated ? tasks.map(item => item.id === task.id ? updated : item) : tasks.filter(item => item.id !== task.id);
     if (updated && options.method === 'PATCH' && Object.hasOwn(JSON.parse(options.body), 'done')) {
-      $('sort-status').textContent = updated.done ? 'Task completed' : 'Task reopened';
+      $('sort-status').textContent = updated.done ? 'Task completed. Nice work!' : 'Task reopened';
+      if (updated.done && !task.done) celebrate(row);
     } else if (updated) announce(updated);
     else $('sort-status').textContent = 'Task deleted';
     render();
@@ -106,6 +126,15 @@ function taskCard(task) {
 function render() {
   $('open-count').textContent = tasks.filter(task => !task.done).length;
   $('done-count').textContent = tasks.filter(task => task.done).length;
+  const done = tasks.filter(task => task.done).length;
+  const percent = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+  $('task-progress').value = percent;
+  $('progress-count').textContent = `${done} of ${tasks.length} complete`;
+  $('progress-percent').textContent = `${percent}%`;
+  $('progress-copy').textContent = !tasks.length ? 'A fresh start. Make it a good one.'
+    : done === tasks.length ? 'All done. Take a little victory lap!'
+    : done ? 'Look at you go. Keep that spark alive!'
+    : 'Your next little win is waiting.';
   $('board').replaceChildren();
   const visible = tasks.filter(task => task.done === completed);
   labels.forEach((label, index) => {
