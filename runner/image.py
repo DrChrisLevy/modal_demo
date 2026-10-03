@@ -27,7 +27,7 @@ def tools_image():
             f"chmod +x {plugin}",
             "docker compose version",
         )
-        .env({"GH_PROMPT_DISABLED": "1", "COMPOSE_PARALLEL_LIMIT": "1"})
+        .env({"GH_PROMPT_DISABLED": "1"})
         .workdir("/workspace")
     )
     return image.run_commands(
