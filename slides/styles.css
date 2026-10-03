@@ -388,6 +388,9 @@ code { font-family: "Geist Mono", monospace; }
 .vm-slide .source-excerpt pre { font-size: 1.640625cqw; }
 .vm-slide .code-footer { justify-content: flex-end; }
 
+.create-vm-slide .code-layout { top: 22%; }
+.create-vm-slide .source-excerpt pre { line-height: 1.2; }
+
 .image-slide .code-layout { display: block; }
 .image-slide .source-excerpt pre { font-size: 1.640625cqw; }
 .image-slide .code-footer { justify-content: flex-end; }
@@ -447,8 +450,9 @@ code { font-family: "Geist Mono", monospace; }
   object-position: left top;
 }
 
-.closing-content, .resources-content {
+.resources-content {
   position: absolute;
+  top: 28%;
   left: 5.625%;
   right: 5.625%;
   color: var(--secondary);
@@ -456,17 +460,11 @@ code { font-family: "Geist Mono", monospace; }
   line-height: 1.45;
   letter-spacing: -0.025em;
 }
-.closing-content { top: 38%; }
-.closing-content p { margin: 0 0 2.5cqw; }
-.closing-content p:last-child { color: var(--accent); }
-.resources-content { top: 28%; }
-.resources-content > p { margin: 0 0 1.25cqw; }
+.resources-content p { margin: 0 0 1.25cqw; }
 .resources-content a { color: var(--accent); text-decoration: none; }
 .resources-content a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 .resources-content a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-.resources-content .resources-purpose { margin-top: 2.5cqw; color: var(--foreground); max-width: 78cqw; }
-.related-post { margin-top: 3.125cqw; }
-.related-post p { margin: 0.9375cqw 0 0; max-width: 77cqw; font-size: 1.875cqw; }
+.resources-takeaways { margin-bottom: 2.5cqw; color: var(--foreground); }
 .resources-slide .code-footer { justify-content: flex-end; }
 
 @page { size: 13.333333in 7.5in; margin: 0; }
