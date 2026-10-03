@@ -30,9 +30,12 @@ OPENAI_API_KEY=your-openai-api-key-here
 TYPESAFE_API_KEY=your-typesafe-api-key-here
 ```
 
+The app works without a TypeSafe key; tasks stay in Unsorted. But it's more fun
+with Jev hooked up :)
+
 For remote runs, create a [Modal Secret](https://modal.com/docs/guide/secrets) named
-`typesafe-secret` containing `TYPESAFE_API_KEY`. Leave the value blank to run without
-automatic sorting; tasks stay in Unsorted. CI uses the same Modal Secret.
+`typesafe-secret` containing `TYPESAFE_API_KEY` (the value can be blank).
+CI uses the same Modal Secret.
 
 ## Run on Modal
 
